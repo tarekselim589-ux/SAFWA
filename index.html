@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -214,6 +214,166 @@ input.num{direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
 .migr{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.45)}
 .migr .askbox p{margin:0 0 14px}
 .outbtn{display:block;margin:18px auto 8px;background:none;border:1px solid var(--line,#ccc);color:inherit;opacity:.75;border-radius:9px;padding:5px 14px;font:inherit;font-size:13px;cursor:pointer}
+</style>
+<style id="glass">
+/* ===== Liquid glass skin, laid over the app's own colours ===== */
+
+:root{
+  --g-fill:   rgba(255,255,255,.52);
+  --g-fill-2: rgba(255,255,255,.38);
+  --g-edge:   rgba(255,255,255,.75);
+  --g-shadow: 0 8px 28px rgba(27,78,99,.10), 0 1px 2px rgba(27,78,99,.06);
+  --g-blur:   saturate(170%) blur(10px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --g-fill:   rgba(18,52,66,.52);
+  --g-fill-2: rgba(18,52,66,.36);
+  --g-edge:   rgba(255,255,255,.14);
+  --g-shadow: 0 8px 32px rgba(0,0,0,.42), 0 1px 2px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --g-fill:   rgba(18,52,66,.52);
+  --g-fill-2: rgba(18,52,66,.36);
+  --g-edge:   rgba(255,255,255,.14);
+  --g-shadow: 0 8px 32px rgba(0,0,0,.42), 0 1px 2px rgba(0,0,0,.3);
+}
+
+/* the light that the glass sits on */
+body{
+  background:
+    radial-gradient(860px 600px at  6% -8%, rgba(125,211,252,.42), transparent 60%),
+    radial-gradient(740px 560px at 98%  4%, rgba(165,220,235,.38), transparent 58%),
+    radial-gradient(820px 640px at 18% 56%, rgba(167,233,220,.30), transparent 60%),
+    radial-gradient(900px 700px at 90% 80%, rgba(186,214,240,.34), transparent 62%),
+    radial-gradient(940px 720px at 44% 114%,rgba(198,232,222,.30), transparent 62%),
+    #F2F8FB !important;
+  background-attachment:fixed;
+}
+
+/* every surface */
+.panel, .card, .chip, .tile, .box, .row, .item, .sheet,
+.tabbar, .top, .topbar, .header, .bar, .seg, .list, .note{
+  -webkit-backdrop-filter:var(--g-blur);
+  backdrop-filter:var(--g-blur);
+}
+
+.panel, .card, .sheet, .tile, .box{
+  background:var(--g-fill) !important;
+  border:1px solid var(--g-edge) !important;
+  border-radius:20px !important;
+  box-shadow:var(--g-shadow);
+}
+
+/* a highlight along the top edge, the way iOS does it */
+.panel, .card{ position:relative; overflow:hidden; }
+.panel::before, .card::before{
+  content:""; position:absolute; inset:0 0 auto 0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);
+  pointer-events:none;
+}
+
+.card{ transition:transform .18s ease, box-shadow .18s ease; }
+.card:active{ transform:scale(.985); }
+
+.chip{
+  background:var(--g-fill-2) !important;
+  border:1px solid var(--g-edge) !important;
+  box-shadow:0 2px 10px rgba(7,59,76,.08);
+}
+.chip[aria-pressed="true"]{
+  background:linear-gradient(180deg, color-mix(in srgb,var(--water) 92%,#fff),
+                                     var(--water)) !important;
+  border-color:transparent !important;
+  box-shadow:0 4px 14px color-mix(in srgb,var(--water) 42%, transparent);
+}
+
+.btn:not(.ghost){
+  background:linear-gradient(180deg, color-mix(in srgb,var(--water) 90%,#fff),
+                                     var(--water)) !important;
+  border-radius:14px !important;
+  box-shadow:0 5px 18px color-mix(in srgb,var(--water) 38%, transparent);
+}
+
+/* the frosted bar at the bottom */
+.tabbar{
+  background:var(--g-fill) !important;
+  border-top:1px solid var(--g-edge) !important;
+  -webkit-backdrop-filter:saturate(180%) blur(12px);
+  backdrop-filter:saturate(180%) blur(12px);
+  box-shadow:0 -6px 28px rgba(7,59,76,.12);
+}
+.tabbar button[aria-current="true"]{
+  background:color-mix(in srgb,var(--water) 14%, transparent);
+}
+
+input, select, textarea{
+  background:var(--g-fill-2) !important;
+  border:1px solid var(--g-edge) !important;
+  border-radius:13px !important;
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+}
+
+/* the training card keeps its paper look - it is meant to be printed */
+.cardwrap .sheet{
+  background:var(--card) !important;
+  -webkit-backdrop-filter:none; backdrop-filter:none;
+}
+
+
+/* the bar at the top is glass too */
+.top, .topbar, .header, .hdr, .brand, .apptop{
+  background:var(--g-fill) !important;
+  -webkit-backdrop-filter:saturate(180%) blur(12px);
+  backdrop-filter:saturate(180%) blur(12px);
+  border-bottom:1px solid var(--g-edge);
+}
+
+/* rows inside a panel get their own thin pane */
+.panel .row, .panel .item, .list .row{
+  background:var(--g-fill-2);
+  border:1px solid var(--g-edge);
+  border-radius:14px;
+  margin-bottom:8px;
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+}
+
+/* no shadow on the text - it has to read sharp */
+body, body *{ text-shadow:none !important; }
+
+
+/* the app is light, whatever the phone is set to */
+:root, :root:not([data-theme="light"]){
+  --tile:#EEF5F6; --card:#FFFFFF; --water:#0B5770; --deep:#073B4C;
+  --ink:#000000; --muted:#3D5560; --line:#CBDDE3;
+  --rope-r:#D23B3B; --rope-y:#F2C230; --good:#1E8A5A; --bad:#C0392B;
+  color-scheme:light;
+}
+
+
+/* anything sitting on glass reads black */
+.panel, .card, .sheet, .tile, .box, .chip, .row, .item,
+.panel *, .card *, .tile *, .box *{
+  color:var(--ink);
+}
+/* except the headings and the figures, which keep the team blue */
+h1,h2,h3,h4,.ttl,.title,.hd,.big,.num,.val,.metric{ color:var(--water) !important; }
+.muted,.sub,.small,.hint,.note{ color:var(--muted) !important; }
+/* a filled button is dark, so its own text stays white - black would
+   not be readable on it. the outline button is light glass with black text */
+.btn:not(.ghost), .btn:not(.ghost) *, .chip[aria-pressed="true"]{
+  color:#fff !important;
+}
+.btn.ghost{
+  background:var(--g-fill) !important;
+  color:#000 !important;
+  font-weight:700;
+  border:1.5px solid var(--water) !important;
+  border-radius:14px !important;
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  box-shadow:0 3px 12px rgba(27,78,99,.10);
+}
+input, select, textarea{ color:#000 !important; }
+
 </style>
 </head>
 <body>
