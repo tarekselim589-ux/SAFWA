@@ -71,6 +71,7 @@ label{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
 input,select{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--tile)}
 input.num{direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
 input[type="date"]{direction:ltr;text-align:right}
+input[type="checkbox"]{width:auto!important;min-width:0;flex:0 0 auto;padding:0;accent-color:var(--water);transform:scale(1.3);margin:0 2px}
 .hint{font-size:13px;color:var(--muted)}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
 .chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:14px}
@@ -722,7 +723,8 @@ function measView(){
       <div>
         <b>${STROKES[m.stroke]} ${m.dist} · مسبح ${m.pool} م</b>
         <div class="lmeta" style="direction:ltr;text-align:right">${mFmt(m.tot)}${
-          m.strokes?` · ${m.strokes} ضربة`:""}</div>
+          m.strokes?` · ${m.strokes} ضربة`:""}</div>${
+          m.also?`<div class="lmeta">محسوب في البطولة كمان</div>`:""}
         ${(m.laps||[]).some(x=>x)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
           ${m.laps.map((t,i)=>t?pill(`${i+1}· ${t.toFixed(2)}`,t===worst):"").join("")}</div>`:""}
         ${(dr!=null||eqo)?`<div class="lmeta" style="margin-top:6px">${
@@ -762,6 +764,10 @@ function measView(){
       <div class="field" style="margin:0;max-width:120px"><label for="mN">عدد الضربات</label>
         <input id="mN" class="num" inputmode="numeric" value="${esc(d.mN||"")}"></div>
     </div>
+    <label for="mAlso" style="display:flex;align-items:center;gap:10px;margin-top:14px;cursor:pointer">
+      <input type="checkbox" id="mAlso" ${d.mAlso?"checked":""}>
+      <span>احسبه في البطولة كمان</span></label>
+    <p class="lmeta" style="margin:4px 0 0">يتسجّل كتيست — مش هيتحسب سباق في الترشيح.</p>
     ${laps?`<p class="hint" style="margin-top:12px">أزمنة الأطوال</p>
     <div class="row" style="align-items:flex-end;gap:8px;flex-wrap:wrap">
       ${Array.from({length:laps},(_,i)=>`<div class="field" style="margin:0;max-width:78px">
@@ -795,16 +801,22 @@ async function mSaveNow(){
   if(!tot){ toast("اكتب الزمن الكلي"); return; }
   const dist=+(d.mD||60), pool=+(d.mP||20), n=mLaps(dist,pool);
   const laps=Array.from({length:n},(_,i)=>parseTime(d["mL"+i]||"")||0);
+  const who=state.mSw||state.swimmers[0].id, when=d.mDate||today(), st=d.mSt||"free";
+  const also=!!d.mAlso;
   await store.saveMeas({
-    swimmer: state.mSw||state.swimmers[0].id,
-    date: d.mDate||today(),
-    stroke: d.mSt||"free",
+    swimmer: who, date: when, stroke: st,
     dist, pool, tot,
     strokes: +(d.mN||0)||null,
-    laps: laps.some(x=>x)?laps:[]
+    laps: laps.some(x=>x)?laps:[],
+    also
   });
+  if(also){
+    try{ await store.addResult({swimmer:who,stroke:st,dist,pool,t:tot,date:when,
+      kind:"test",at:Date.now()}); }
+    catch(e){ toast("القياس اتحفظ، بس مادخلش البطولة — جرّب تاني"); render(); return; }
+  }
   ["mT","mN"].concat(Array.from({length:n},(_,i)=>"mL"+i)).forEach(k=>delete state.mdraft[k]);
-  toast("اتحفظ"); render();
+  toast(also?"اتحفظ في القياسات والبطولة":"اتحفظ"); render();
 }
 
 function logView(){
@@ -2659,6 +2671,7 @@ function liveCapture(e){
   const m=/^x-(st|d|t|r)-(\d+)$/.exec(t.id||"");
   if(m){ state.rdraft=state.rdraft||{}; state.rdraft[({st:"st",d:"d",t:"t",r:"r"})[m[1]]+m[2]]=t.value; return; }
 
+  if(t.id==="mAlso"){ state.mdraft=state.mdraft||{}; state.mdraft.mAlso=t.checked; return; }
   if(/^(mDate|mSt|mD|mP|mT|mN)$/.test(t.id||"")||/^mL\d+$/.test(t.id||"")){
     state.mdraft=state.mdraft||{}; state.mdraft[t.id]=t.value; return; }
 
