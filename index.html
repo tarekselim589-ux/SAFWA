@@ -70,6 +70,7 @@ label{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
 .field{margin-bottom:12px;flex:1;min-width:130px}
 input,select{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--tile)}
 input.num{direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
+input[type="date"]{direction:ltr;text-align:right}
 .hint{font-size:13px;color:var(--muted)}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
 .chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:14px}
@@ -2636,12 +2637,16 @@ document.addEventListener("input",liveCapture,true);
 document.addEventListener("change",liveCapture,true);
 document.addEventListener("click",e=>{
   const b=e.target.closest&&e.target.closest("[data-mdel]");
-  if(b){ store.delMeas(b.dataset.mdel); return; }
+  if(b){ (async()=>{ if(await askConfirm("تمسح القياس ده؟")){
+      try{ await store.delMeas(b.dataset.mdel); toast("اتمسح"); }catch(x){ toast("ماتمسحش، جرّب تاني"); } } })(); return; }
   if(e.target.closest&&e.target.closest("#mSave")){ mSaveNow(); }
 },true);
 document.addEventListener("change",e=>{
   if(e.target&&e.target.id==="mSw"){ state.mSw=e.target.value; render(); }
-  if(e.target&&(e.target.id==="mD"||e.target.id==="mP")){ render(); }
+  if(e.target&&(e.target.id==="mD"||e.target.id==="mP")){
+    const d=state.mdraft||{}, n=mLaps(+(d.mD||60),+(d.mP||20));
+    Object.keys(d).forEach(k=>{ const m=/^mL(\d+)$/.exec(k); if(m&&+m[1]>=n) delete d[k]; });
+    render(); }
 },true);
 function liveCapture(e){
   const t=e.target; if(!t||!t.id&&!t.classList) return;
@@ -2653,6 +2658,9 @@ function liveCapture(e){
   if(lg){ state.draft=state.draft||{}; state.draft[`${lg[1]}${lg[2]}_${lg[3]}`]=t.value; return; }
   const m=/^x-(st|d|t|r)-(\d+)$/.exec(t.id||"");
   if(m){ state.rdraft=state.rdraft||{}; state.rdraft[({st:"st",d:"d",t:"t",r:"r"})[m[1]]+m[2]]=t.value; return; }
+
+  if(/^(mDate|mSt|mD|mP|mT|mN)$/.test(t.id||"")||/^mL\d+$/.test(t.id||"")){
+    state.mdraft=state.mdraft||{}; state.mdraft[t.id]=t.value; return; }
 
   if(t.id==="lDate"){ if(state.log) state.log.date=t.value||state.log.date; }
 }
