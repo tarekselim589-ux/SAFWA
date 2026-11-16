@@ -820,7 +820,8 @@ async function mSaveNow(){
 }
 
 function logView(){
-  if(!state.swimmers.length) return `<div class="panel empty">ضيف سباح الأول.</div>`;
+  const back=`<button class="back" data-go="tools">→ رجوع</button>`;
+  if(!state.swimmers.length) return back+`<div class="panel empty">ضيف سباح الأول.</div>`;
   const c=state.log||(state.log={date:today(),groups:[1]}); const d=state.draft||{};
   if(!c.groups||!c.groups.length) c.groups=[1];
   const row=(gi,ri)=>`<div class="row" style="align-items:flex-end;margin-top:8px">
@@ -841,7 +842,7 @@ function logView(){
     ${Array.from({length:nrows},(_,ri)=>row(gi,ri)).join("")}
     <button class="more" data-addrow="${gi}">+ ضيف سباق لنفس السباح</button>
   </div>`;
-  return `<h2>سجّل أرقام</h2>
+  return back+`<h2>سجّل أرقام</h2>
   <div class="panel">
     <div class="field" style="max-width:180px"><label for="lDate">التاريخ</label><input id="lDate" type="date" value="${c.date}"></div>
     <p class="hint">اختار السباح مرة واحدة وضيف تحته كل سباقاته.</p>
@@ -2467,9 +2468,9 @@ function boardView(){
   </div>
   <p class="note">الترتيب بأحسن وقت. الفرق على الشمال = آخر وقت مقارنة باللي قبله. 🏅 = كسر رقمه الشخصي في آخر 30 يوم.</p>`;
 }
-const NAV=[["home","الفريق","🏊"],["log","تسجيل","✍️"],["meas","قياسات","📐"],["race","البطولة","🏅"],["tools","أدوات","🧰"],["settings","إعدادات","⚙️"]];
+const NAV=[["home","الفريق","🏊"],["meas","قياسات","📐"],["race","البطولة","🏅"],["tools","أدوات","🧰"],["settings","إعدادات","⚙️"]];
 function navBar(){
-  const cur=["goals","relay","conv","board","meets","picks","plan","card","pool","cplan","ccard"].includes(state.view)?"tools":(state.view==="swimmer"||state.view==="cmp")?"home":state.view;
+  const cur=["goals","relay","conv","board","meets","picks","plan","card","pool","cplan","ccard","log"].includes(state.view)?"tools":(state.view==="swimmer"||state.view==="cmp")?"home":state.view;
   const bar=$("#tabbar"); if(bar) bar.innerHTML=NAV.map(([v,l,ic])=>`<button data-go="${v}" aria-current="${v===cur}"><i>${ic}</i>${l}</button>`).join("");
   return "";
 }
@@ -2479,6 +2480,7 @@ function toolsView(){
   <button class="card" data-go="cplan"><b>🏁 خطة البطولة — 35 حصة + 6 أيام بطولة</b><span>الخطة الكاملة من 31 أكتوبر لحد البطولة، بالتواريخ والتخصص لكل سباح.</span></button>
   <button class="card" data-go="plan"><b>🗓️ برنامج الأسبوع</b><span>5 حصص جاهزة (خميس · جمعة · سبت · اتنين · تلات) بالمسافات والتخصص لكل سباح.</span></button>
   <button class="card" data-go="meets"><b>📅 مواعيد البطولات</b><span>البطولات الجاية بتواريخها وأماكنها، والعد التنازلي، وآخر يوم تسجيل.</span></button>
+  <button class="card" data-go="log"><b>✍️ تسجيل سريع لأكتر من سباح</b><span>أزمنة كذا سباح وكذا سباق في شاشة واحدة، بعد التمرين على طول.</span></button>
   <button class="card" data-go="board"><b>📊 لوحة مقارنة الفريق</b><span>ترتيب كل السباحين في نوع ومسافة معينة، والفرق بينهم والأرقام الشخصية.</span></button>
   <button class="card" data-go="goals"><b>🎯 أهداف البطولة</b><span>وقت مستهدف لكل سباح، وباقي كام ثانية، والعد التنازلي للبطولة.</span></button>
   <button class="card" data-msum="1"><b>📋 ملخص آخر بطولة</b><span>مين كسر رقمه، ومين حقق هدفه، ومين على المنصة أو قريب منها.</span></button>
