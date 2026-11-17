@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="manifest" href="manifest.webmanifest">
@@ -3046,6 +3049,11 @@ window.addEventListener("fbauth",e=>{
   else { if(STARTED){location.reload();return;} showLogin(); }
 });
 setTimeout(()=>{ if(!STARTED&&!window.FB) showLogin(); },8000);
+setTimeout(()=>{ if(!STARTED&&window.FB&&!("user" in window.FB)){
+  const l=$("#lgLoad"); l.textContent="الاتصال بطيء… ";
+  const b=document.createElement("button"); b.type="button"; b.className="btn ghost"; b.style.marginTop="10px"; b.textContent="جرّب تاني";
+  b.addEventListener("click",()=>location.reload()); l.appendChild(b);
+} },7000);
 if(window.FB&&("user" in window.FB)){ if(window.FB.user){ $("#lg").hidden=true; startCloud(); } else showLogin(); }
 $("#lgForm").addEventListener("submit",async e=>{
   e.preventDefault();
