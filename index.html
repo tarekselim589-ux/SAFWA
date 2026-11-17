@@ -75,6 +75,9 @@ input,select{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid 
 input.num{direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
 input[type="date"]{direction:ltr;text-align:right}
 input[type="checkbox"]{width:auto!important;min-width:0;flex:0 0 auto;padding:0;accent-color:var(--water);transform:scale(1.3);margin:0 2px}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.mcard .x[data-medit]{color:var(--water);font-size:18px;font-weight:700;opacity:1}
+.mcard.on{border-color:var(--water);box-shadow:0 0 0 3px color-mix(in srgb,var(--water) 18%, transparent)}
 .hint{font-size:13px;color:var(--muted)}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
 .chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:14px}
@@ -440,7 +443,7 @@ try{ document.documentElement.style.setProperty("--logo",`url("${LOGO}")`); }cat
 const STROKES={free:"حرة",back:"ظهر",breast:"صدر",fly:"فراشة",medley:"متنوع"};
 const DISTS=[20,25,40,50,60,100,200,400];
 const SEX={m:"ولاد",f:"بنات"};
-const state={swimmers:[],results:[],view:"home",sel:null,event:null,ai:{},log:null,draft:{},bdraft:{},gf:null,gOpts:null,bench:[],meets:[],gT:"",gWhy:"",edit:null,goals:[],meet:null,raceTab:"log",meetKey:null,meetSeek:null,meetBy:"sum",backup:null,board:null,meas:[],mdraft:{},mSw:null,cpDay:null,cpWho:null,wAll:false,sAll:false,histAll:false};
+const state={swimmers:[],results:[],view:"home",sel:null,event:null,ai:{},log:null,draft:{},bdraft:{},gf:null,gOpts:null,bench:[],meets:[],gT:"",gWhy:"",edit:null,goals:[],meet:null,raceTab:"log",meetKey:null,meetSeek:null,meetBy:"sum",backup:null,board:null,meas:[],mdraft:{},mSw:null,medit:null,cpDay:null,cpWho:null,wAll:false,sAll:false,histAll:false};
 let db=null, sample=null, dl=null, mode="local";
 
 /* ---------- helpers ---------- */
@@ -478,7 +481,7 @@ function loadLocal(){try{const d=JSON.parse(localStorage.getItem("safwa")||"{}")
 function saveLocal(){try{localStorage.setItem("safwa",JSON.stringify({swimmers:state.swimmers,results:state.results,goals:state.goals,meet:state.meet,bench:state.bench,meets:state.meets,meas:state.meas}));}catch(e){}}
 const store={
   async addSwimmer(s){ if(db){await db.collection("swimmers").add(s);} else {state.swimmers.push({id:"s"+Date.now(),...s});saveLocal();render();} },
-  async addResult(r){ if(db){await db.collection("results").add(r);} else {state.results.push({id:"r"+Date.now(),...r});saveLocal();render();} },
+  async addResult(r){ if(db){ const ref=await db.collection("results").add(r); return ref.id; } else { const id="r"+Date.now(); state.results.push({id,...r});saveLocal();render(); return id; } },
   async put(coll,id,data){ if(db){await db.doc(coll+"/"+id).set(data);} else {
       const arr=coll==="swimmers"?state.swimmers:coll==="results"?state.results:state.goals;
       const i=arr.findIndex(x=>x.id===id); i<0?arr.push({id,...data}):Object.assign(arr[i],data); saveLocal(); } },
@@ -722,24 +725,35 @@ function measView(){
     const dr=mDrop(m.laps||[]);
     const eqo=mTo50(m.dist,m.pool,m.tot);
     const worst=(m.laps||[]).length>1?Math.max(...m.laps.filter(x=>x)):null;
-    return `<div class="rank" style="grid-template-columns:1fr auto;align-items:start">
-      <div>
-        <b>${STROKES[m.stroke]} ${m.dist} · مسبح ${m.pool} م</b>
-        <div class="lmeta" style="direction:ltr;text-align:right">${mFmt(m.tot)}${
-          m.strokes?` · ${m.strokes} ضربة`:""}</div>${
-          m.also?`<div class="lmeta">محسوب في البطولة كمان</div>`:""}
-        ${(m.laps||[]).some(x=>x)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-          ${m.laps.map((t,i)=>t?pill(`${i+1}· ${t.toFixed(2)}`,t===worst):"").join("")}</div>`:""}
-        ${(dr!=null||eqo)?`<div class="lmeta" style="margin-top:6px">${
-          dr!=null?`هبوط ${dr.toFixed(1)}%`:""}${dr!=null&&eqo?" · ":""}${
-          eqo?`≈ ${mFmt(eqo.t)} ${eqo.same?`في مسبح 50`:`في 50 متر`}`:""}</div>`:""}
+    const line=(lbl,val,tag,bad)=>`<div style="display:flex;align-items:center;gap:10px;
+      padding:7px 0;border-bottom:1px solid var(--line)">
+      <span class="lmeta" style="flex:1">${lbl}</span>
+      ${tag?`<span style="font-size:12px;color:var(--bad);font-weight:700">${tag}</span>`:""}
+      <b style="direction:ltr;font-variant-numeric:tabular-nums;font-size:16px;
+         color:${bad?"var(--bad)":"var(--ink)"}">${val}</b></div>`;
+    const on=state.medit===m.id;
+    return `<div class="mcard${on?" on":""}">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <b style="font-size:16px">${STROKES[m.stroke]} ${m.dist} · مسبح ${m.pool} م</b>
+          <div class="lmeta">${esc(m.date||"")}</div>
+        </div>
+        ${diff!=null?`<span style="color:${diff<0?"var(--good)":"var(--bad)"};font-weight:700;
+          direction:ltr;font-variant-numeric:tabular-nums">${diff<0?"−":"+"}${Math.abs(diff).toFixed(2)}</span>`:""}
+        <button class="x" data-medit="${m.id}" title="تعديل" style="margin:0">✎</button>
+        <button class="x" data-mdel="${m.id}" title="مسح" style="margin:0">✕</button>
       </div>
-      <div style="text-align:left">
-        <div class="lmeta">${esc(m.date||"")}</div>
-        ${diff!=null?`<div style="color:${diff<0?"var(--good)":"var(--bad)"};font-weight:700;
-          direction:ltr;font-variant-numeric:tabular-nums">${diff<0?"−":"+"}${Math.abs(diff).toFixed(2)}</div>`:""}
-        <button class="x" data-mdel="${m.id}">✕</button>
-      </div></div>`;
+      <div style="margin-top:10px">
+        ${line("الزمن الكلي",mFmt(m.tot))}
+        ${m.strokes?line("عدد الضربات",m.strokes):""}
+        ${(m.laps||[]).map((t,i)=>t?line(`طول ${i+1}`,t.toFixed(2),
+            t===worst?"الأبطأ":"",t===worst):"").join("")}
+      </div>
+      ${(dr!=null||eqo)?`<div class="lmeta" style="margin-top:10px">${
+        dr!=null?`هبوط ${dr.toFixed(1)}%`:""}${dr!=null&&eqo?" · ":""}${
+        eqo?`≈ ${mFmt(eqo.t)} ${eqo.same?`في مسبح 50`:`في 50 متر`}`:""}</div>`:""}
+      ${m.also?`<div class="lmeta">محسوب في البطولة كمان</div>`:""}
+    </div>`;
   };
 
   const eqo=mTo50(dist,pool,parseTime(d.mT||""));
@@ -749,7 +763,7 @@ function measView(){
       <select id="mSw">${state.swimmers.map(s=>`<option value="${s.id}" ${s.id===sw?"selected":""}>${esc(s.name)}</option>`).join("")}</select></div>
   </div>
 
-  <h2>قياس جديد</h2>
+  <h2>${state.medit?"تعديل قياس":"قياس جديد"}</h2>
   <div class="panel">
     <div class="row" style="align-items:flex-end;gap:8px;flex-wrap:wrap">
       <div class="field" style="margin:0;max-width:150px"><label for="mDate">التاريخ</label>
@@ -782,7 +796,7 @@ function measView(){
       <div class="lmeta" style="margin-top:4px">${eqo.same
         ?"نفس المسافة في حوض 50 — الفرق دورانات أقل."
         :"تقديري، من سرعته بعد شيل مكسب الدوران."}</div></div>`:""}
-    <div class="row" style="margin-top:14px"><button class="btn" id="mSave">احفظ القياس</button></div>
+    <div class="row" style="margin-top:14px;gap:8px"><button class="btn" id="mSave">${state.medit?"حدّث القياس":"احفظ القياس"}</button>${state.medit?`<button class="btn ghost" id="mCancel">إلغاء</button>`:""}</div>
   </div>
 
   ${Object.keys(bests).length?`<h2>أحسن أرقامه</h2>
@@ -795,7 +809,7 @@ function measView(){
   ${chart}
 
   <h2>كل القياسات</h2>
-  <div class="panel">${mine.length?mine.map(row).join(""):`<p class="empty">لسه مفيش قياسات لـ${esc(nm(sw))}.</p>`}</div>`;
+  ${mine.length?mine.map(row).join(""):`<div class="panel"><p class="empty">لسه مفيش قياسات لـ${esc(nm(sw))}.</p></div>`}`;
 }
 
 async function mSaveNow(){
@@ -805,21 +819,54 @@ async function mSaveNow(){
   const dist=+(d.mD||60), pool=+(d.mP||20), n=mLaps(dist,pool);
   const laps=Array.from({length:n},(_,i)=>parseTime(d["mL"+i]||"")||0);
   const who=state.mSw||state.swimmers[0].id, when=d.mDate||today(), st=d.mSt||"free";
-  const also=!!d.mAlso;
-  await store.saveMeas({
-    swimmer: who, date: when, stroke: st,
-    dist, pool, tot,
-    strokes: +(d.mN||0)||null,
-    laps: laps.some(x=>x)?laps:[],
-    also
-  });
-  if(also){
-    try{ await store.addResult({swimmer:who,stroke:st,dist,pool,t:tot,date:when,
-      kind:"test",at:Date.now()}); }
-    catch(e){ toast("القياس اتحفظ، بس مادخلش البطولة — جرّب تاني"); render(); return; }
+  const also=!!d.mAlso, strokes=+(d.mN||0)||null;
+  const old=state.medit?state.meas.find(x=>x.id===state.medit):null;
+  const rec={ swimmer:who, date:when, stroke:st, dist, pool, tot, strokes,
+    laps: laps.some(x=>x)?laps:[], also };
+  if(old&&old.rid) rec.rid=old.rid;
+
+  // النسخة اللي في البطولة: تتضاف أو تتعدّل أو تتشال حسب المربع
+  try{
+    if(also){
+      const r=mResult(rec);
+      if(rec.rid&&state.results.some(x=>x.id===rec.rid)) await store.put("results",rec.rid,r);
+      else { const id=await store.addResult(r); if(id) rec.rid=id; }
+    } else if(rec.rid){
+      await store.delResult(rec.rid); rec.rid=null;   // null مش delete: الحفظ المحلي بيدمج
+    }
+  }catch(e){ toast("مشكلة في النت — جرّب تاني"); return; }
+
+  await store.saveMeas(rec, state.medit||undefined);
+  state.medit=null;
+  ["mT","mN"].concat(Array.from({length:12},(_,i)=>"mL"+i)).forEach(k=>delete state.mdraft[k]);
+  toast(old?"اتعدّل":(also?"اتحفظ في القياسات والبطولة":"اتحفظ")); render();
+}
+
+/* الرقم اللي بيروح للبطولة - بالأطوال والضربات مش الزمن النهائي بس */
+function mResult(m){
+  const L=(m.laps||[]).filter(x=>x), r={ swimmer:m.swimmer, stroke:m.stroke,
+    dist:m.dist, pool:m.pool, t:m.tot, date:m.date, kind:"test", at:Date.now() };
+  if(m.strokes) r.sc=m.strokes;
+  if(L.length){
+    r.laps=L.slice();
+    const half=Math.floor(L.length/2);
+    if(half&&L.length%2===0){
+      r.first=+L.slice(0,half).reduce((a,b)=>a+b,0).toFixed(2);
+      r.second=+L.slice(half).reduce((a,b)=>a+b,0).toFixed(2);
+    }
   }
-  ["mT","mN"].concat(Array.from({length:n},(_,i)=>"mL"+i)).forEach(k=>delete state.mdraft[k]);
-  toast(also?"اتحفظ في القياسات والبطولة":"اتحفظ"); render();
+  return r;
+}
+
+/* يحط القياس في الفورمة فوق عشان تعدّله */
+function mEdit(id){
+  const m=state.meas.find(x=>x.id===id); if(!m) return;
+  state.medit=id; state.mSw=m.swimmer;
+  const d={ mDate:m.date||"", mSt:m.stroke||"free", mD:String(m.dist),
+    mP:String(m.pool), mT:mFmt(m.tot), mN:m.strokes?String(m.strokes):"",
+    mAlso:!!m.also };
+  (m.laps||[]).forEach((t,i)=>{ if(t) d["mL"+i]=t.toFixed(2); });
+  state.mdraft=d; render(); scrollTo(0,0);
 }
 
 function logView(){
@@ -1233,7 +1280,7 @@ function swimmerView(){
   ${deepCard(sw,state.event)}
   <h2>السجل</h2>
   <div class="panel"><ul class="hist">${[...rs].sort(byDate).reverse().slice(0,state.histAll?999:6).map(r=>`<li>
-    <span>${r.date} · ${r.dist}م ${STROKES[r.stroke]}${r.kind==="race"?" · بطولة"+(r.rank?` (مركز ${r.rank})`:""):""}${(r.pool||20)!=20?` · حمام ${r.pool}`:""}${r.sc?` · ${r.sc} ضربة`:""}${r.note?` · ${esc(r.note)}`:""}</span>
+    <span>${r.date} · ${r.dist}م ${STROKES[r.stroke]}${r.kind==="race"?" · بطولة"+(r.rank?` (مركز ${r.rank})`:""):""}${(r.pool||20)!=20?` · حمام ${r.pool}`:""}${r.sc?` · ${r.sc} ضربة`:""}${r.note?` · ${esc(r.note)}`:""}${(r.laps||[]).length?`<br><span style="direction:ltr;display:inline-block;font-variant-numeric:tabular-nums">${r.laps.map(x=>x.toFixed(2)).join(" / ")}</span>`:""}</span>
     <span class="row" style="gap:6px"><span style="font-size:13px">${diffHtml(r.t,prevOf(r,rs)?.t)}</span><span class="t">${fmt(r.t)}</span><button class="x" data-del="${r.id}" aria-label="امسح">✕</button></span></li>`).join("")}</ul>
   ${rs.length>6?`<button class="more" id="hMore">${state.histAll?"اخفي":"اعرض كل السجل ("+rs.length+")"}</button>`:""}</div>`}`;
 }
@@ -2654,8 +2701,18 @@ document.addEventListener("input",liveCapture,true);
 document.addEventListener("change",liveCapture,true);
 document.addEventListener("click",e=>{
   const b=e.target.closest&&e.target.closest("[data-mdel]");
-  if(b){ (async()=>{ if(await askConfirm("تمسح القياس ده؟")){
-      try{ await store.delMeas(b.dataset.mdel); toast("اتمسح"); }catch(x){ toast("ماتمسحش، جرّب تاني"); } } })(); return; }
+  if(b){ (async()=>{ const m=state.meas.find(x=>x.id===b.dataset.mdel);
+      const linked=m&&m.rid&&state.results.some(r=>r.id===m.rid);
+      if(await askConfirm(linked?"تمسح القياس ده؟ الرقم اللي في البطولة هيتمسح كمان.":"تمسح القياس ده؟")){
+        try{ if(linked) await store.delResult(m.rid);
+             await store.delMeas(b.dataset.mdel);
+             if(state.medit===b.dataset.mdel){ state.medit=null; state.mdraft={}; }
+             toast("اتمسح"); }
+        catch(x){ toast("ماتمسحش، جرّب تاني"); } } })(); return; }
+  const be=e.target.closest&&e.target.closest("[data-medit]");
+  if(be){ mEdit(be.dataset.medit); return; }
+  if(e.target.closest&&e.target.closest("#mCancel")){
+    state.medit=null; state.mdraft={}; render(); return; }
   if(e.target.closest&&e.target.closest("#mSave")){ mSaveNow(); }
 },true);
 document.addEventListener("change",e=>{
