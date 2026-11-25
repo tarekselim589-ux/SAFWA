@@ -2435,7 +2435,7 @@ async function meetCard(o){
   const rope=(x,y,w)=>{ for(let i=0,px=x;px<x+w;i++,px+=26){ ctx.beginPath(); ctx.ellipse(px+11,y,11,7,0,0,7); ctx.fillStyle=i%4<2?"#D23B3B":"#FFFFFF"; ctx.fill(); } };
   /* رسم آخر 8 أوقات في السباق ده: كل ما يطلع لفوق أسرع، وآخر نقطة هي البطولة دي */
   const chart=(r,x,y,w,h)=>{
-    const pts=r.hist, n=pts.length, L=x+108, R=x+w-34, T=y+46, B=y+h-46;
+    const pts=r.hist, n=pts.length, L=x+108, R=x+w-34, T=y+76, B=y+h-46;
     ctx.fillStyle="#7C8BA3"; ctx.font=`700 19px ${FD}`; spaced("FASTER ↑",x+20,y+30,2);
     spaced(n>1?`LAST ${n} TIMES`:"FIRST TIME IN THIS RACE",x+w-20,y+30,2,"right");
     if(!n) return;
@@ -2455,6 +2455,10 @@ async function meetCard(o){
       ctx.save(); if(last){ ctx.shadowColor=c; ctx.shadowBlur=22; }
       ctx.beginPath(); ctx.arc(X(i),Y(p.t),last?14:7,0,7); ctx.fillStyle=last?c:"#fff"; ctx.fill(); ctx.restore();
       ctx.beginPath(); ctx.arc(X(i),Y(p.t),last?14:7,0,7); ctx.lineWidth=last?4:3; ctx.strokeStyle=last?"#fff":BLUE; ctx.stroke(); });
+    /* الوقت فوق كل نقطة — آخر نقطة (البطولة دي) أكبر وبلونها */
+    ctx.textAlign="center";
+    pts.forEach((p,i)=>{ const last=i===n-1; ctx.fillStyle=last?(r.st==="pb"?OK:r.st==="slow"?BAD:BLUE):MUTED;
+      ctx.font=`${last?800:700} ${last?24:21}px ${FD}`; ctx.fillText(fmt(p.t),X(i),Y(p.t)-(last?26:18)); });
     ctx.fillStyle=MUTED; ctx.font=`600 19px ${FD}`; ctx.textAlign="center";
     ctx.fillText(pts[0].d,X(0),B+36); if(n>1) ctx.fillText(pts[n-1].d,X(n-1),B+36); ctx.textAlign="left";
   };
