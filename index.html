@@ -179,7 +179,7 @@ input[type="checkbox"]{width:auto!important;min-width:0;flex:0 0 auto;padding:0;
 .back{background:none;border:0;color:var(--water);font-weight:600;padding:0;margin-top:16px}
 .empty{text-align:center;padding:24px 12px;color:var(--muted)}
 .ai{white-space:pre-wrap;font-size:15px;margin-top:10px}
-.toast{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:30;margin-bottom:calc(80px + env(safe-area-inset-bottom,0px));
+.toast{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:80;margin-bottom:calc(80px + env(safe-area-inset-bottom,0px));
   background:var(--deep);color:var(--tile);padding:10px 18px;border-radius:10px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.show{opacity:1}
 .askov{position:fixed;inset:0;z-index:60;background:rgba(7,59,76,.55);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -228,6 +228,13 @@ input[type="checkbox"]{width:auto!important;min-width:0;flex:0 0 auto;padding:0;
 .row2>i.g{color:var(--good)} .row2>i.r{color:var(--bad)}
 .txt{font-size:15px;line-height:1.7}
 p.h2{font-weight:600}
+/* ستوب ووتش */
+.swov{position:fixed;inset:0;z-index:55;background:var(--tile);overflow:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.swbox{max-width:560px;margin:0 auto}
+.swtime{font:700 72px/1.1 "IBM Plex Sans Arabic",Tahoma,sans-serif;text-align:center;direction:ltr;font-variant-numeric:tabular-nums;color:var(--deep);margin:22px 0 6px}
+.swbig{display:block;width:100%;padding:26px 16px!important;font-size:26px!important;border-radius:20px!important;touch-action:manipulation}
+/* شريط "فيه نسخة جديدة" */
+.updbar{position:fixed;inset-inline:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:70;border:0;border-radius:12px;padding:12px 14px;background:var(--water);color:#fff;font:inherit;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .offbar{position:sticky;top:0;z-index:15;margin:0 0 10px;padding:8px 12px;border-radius:10px;background:var(--bad);color:#fff;font-size:14px;font-weight:600;text-align:center}
 .outbtn{display:block;margin:18px auto 8px;background:none;border:1px solid var(--line,#ccc);color:inherit;opacity:.75;border-radius:9px;padding:5px 14px;font:inherit;font-size:13px;cursor:pointer}
 </style>
@@ -698,8 +705,8 @@ function diffHtml(now,old){
 }
 function keepRace(){
   const c=state.race; if(!c) return; const d=state.rdraft=state.rdraft||{};
-  for(let i=0;i<c.n;i++){ const st=$("#x-st-"+i), ds=$("#x-d-"+i), tt=$("#x-t-"+i), rk=$("#x-r-"+i);
-    if(!tt) continue; d["st"+i]=st.value; d["d"+i]=ds.value; d["t"+i]=tt.value.trim(); d["r"+i]=(rk?.value||"").trim(); }
+  for(let i=0;i<c.n;i++){ const st=$("#x-st-"+i), ds=$("#x-d-"+i), tt=$("#x-t-"+i), rk=$("#x-r-"+i), fh=$("#x-f-"+i);
+    if(!tt) continue; d["st"+i]=st.value; d["d"+i]=ds.value; d["t"+i]=tt.value.trim(); d["r"+i]=(rk?.value||"").trim(); d["f"+i]=(fh?.value||"").trim(); }
 }
 
 /* ===== قياسات — أرقام التمرين، مخزن لوحده بعيد عن البطولة ===== */
@@ -811,6 +818,7 @@ function measView(){
   <div class="panel">
     <div class="field" style="max-width:200px"><label for="mSw">السباح</label>
       <select id="mSw">${state.swimmers.map(s=>`<option value="${s.id}" ${s.id===sw?"selected":""}>${esc(s.name)}</option>`).join("")}</select></div>
+    <button class="btn ghost small" data-swopen="1">⏱ ستوب ووتش — وقّت وسجّل على طول</button>
   </div>
 
   <h2>${state.medit?"تعديل قياس":"قياس جديد"}</h2>
@@ -1310,6 +1318,7 @@ function swimmerView(){
     <div class="row"><button class="btn" id="edSave">احفظ التعديل</button><button class="btn ghost" id="edCancel">إلغاء</button>
       <button class="x" id="edDel" style="margin-inline-start:auto;color:var(--bad)">امسح السباح</button></div>
   </div>`:""}
+  <div class="row" style="gap:8px;margin-top:12px"><button class="btn ghost small" data-mcm="0">📤 كارت الشهر ده</button><button class="btn ghost small" data-mcm="1">كارت الشهر اللي فات</button></div>
   ${hasRace&&hasTest?`<div class="chips" style="margin-top:12px"><button class="chip" data-swk="test" aria-pressed="${kind==="test"}">القياسات</button><button class="chip" data-swk="race" aria-pressed="${kind==="race"}">البطولات</button></div>`:""}
   ${!evs.length?`<div class="panel empty" style="margin-top:12px">مفيش أوقات لسه. سجّل أول وقت.</div>${devCard(sw)}`:`
   <div class="chips">${evs.map(x=>`<button class="chip" data-ev="${x.key}" aria-pressed="${x.key===state.event}">${evName(x.key)}</button>`).join("")}</div>
@@ -1347,10 +1356,23 @@ function swimmerView(){
   ${seasonCard(sw)}
   ${deepCard(sw,state.event)}
   <h2>السجل <span class="lmeta">— ${kind==="race"?"البطولات":"القياسات"}</span></h2>
-  <div class="panel"><ul class="hist">${[...rs].sort(byDate).reverse().slice(0,state.histAll?999:6).map(r=>`<li>
+  <div class="panel"><ul class="hist">${[...rs].sort(byDate).reverse().slice(0,state.histAll?999:6).map(r=>state.rEdit===r.id?resEditLi(r):`<li>
     <span>${r.date} · ${r.dist}م ${STROKES[r.stroke]}${r.kind==="race"?" · بطولة"+(r.rank?` (مركز ${r.rank})`:""):""}${(r.pool||20)!=20?` · حمام ${r.pool}`:""}${r.sc?` · ${r.sc} ضربة`:""}${r.note?` · ${esc(r.note)}`:""}${(r.laps||[]).length?`<br><span style="direction:ltr;display:inline-block;font-variant-numeric:tabular-nums">${r.laps.map(x=>x.toFixed(2)).join(" / ")}</span>`:""}</span>
-    <span class="row" style="gap:6px"><span style="font-size:13px">${diffHtml(r.t,prevOf(r,rs)?.t)}</span><span class="t">${fmt(r.t)}</span><button class="x" data-del="${r.id}" aria-label="امسح">✕</button></span></li>`).join("")}</ul>
+    <span class="row" style="gap:6px"><span style="font-size:13px">${diffHtml(r.t,prevOf(r,rs)?.t)}</span><span class="t">${fmt(r.t)}</span><button class="x" data-redit="${r.id}" aria-label="تعديل">✎</button><button class="x" data-del="${r.id}" aria-label="امسح">✕</button></span></li>`).join("")}</ul>
   ${rs.length>6?`<button class="more" id="hMore">${state.histAll?"اخفي":"اعرض كل السجل ("+rs.length+")"}</button>`:""}</div>`}`;
+}
+/* فورمة تعديل وقت متسجل في سجل السباح (الوقت والتاريخ، والمركز والنص الأول لو بطولة) */
+function resEditLi(r){
+  const race=r.kind==="race";
+  return `<li style="display:block">
+    <p class="lmeta" style="margin:0 0 6px">${r.dist}م ${STROKES[r.stroke]}${(r.pool||20)!=20?` · حمام ${r.pool}`:""}${race?" · بطولة":""}</p>
+    <div class="row" style="align-items:flex-end;gap:8px">
+      <div class="field" style="margin:0;max-width:150px"><label for="reDate">التاريخ</label><input id="reDate" type="date" value="${esc(r.date||"")}"></div>
+      <div class="field" style="margin:0;max-width:110px"><label for="reT">الوقت</label><input id="reT" class="num" inputmode="decimal" value="${fmt(r.t)}"></div>
+      ${race?`<div class="field" style="margin:0;max-width:80px"><label for="reRank">المركز</label><input id="reRank" class="num" inputmode="numeric" value="${r.rank||""}"></div>
+      <div class="field" style="margin:0;max-width:100px"><label for="reFirst">النص الأول</label><input id="reFirst" class="num" inputmode="decimal" value="${r.first?fmt(r.first):""}"></div>`:""}
+    </div>
+    <div class="row" style="margin-top:10px"><button class="btn small" data-resave="${r.id}">احفظ</button><button class="btn ghost small" id="reCancel">إلغاء</button></div></li>`;
 }
 function daysTo(d){return Math.max(0,Math.ceil((new Date(d)-new Date(today()))/864e5));}
 const bestOf=(id,dist,stroke,pool)=>{const t=state.results.filter(r=>r.swimmer===id&&r.dist==dist&&r.stroke===stroke&&(r.pool||20)==(pool||20)).map(r=>r.t);return t.length?Math.min(...t):null;};
@@ -2419,7 +2441,9 @@ async function meetCard(o){
   const FD='"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif';
   try{ await Promise.all(["800 40px","700 40px","600 40px","italic 800 40px"].map(f=>document.fonts.load(f+' "Barlow Semi Condensed"'))); }catch(e){}
   const lg=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=CARD_LOGO;});
-  const rows=o.rows, hr=rows.filter(r=>r.place&&r.place<=3).sort((a,b)=>a.place-b.place)[0]||null;
+  /* o.monthly: كارت الشهر — مفيش ميدالية، والدايرة فيها عدد مرات السباحة بدل المركز */
+  const isMeet=!o.monthly;
+  const rows=o.rows, hr=isMeet?rows.filter(r=>r.place&&r.place<=3).sort((a,b)=>a.place-b.place)[0]||null:null;
   const W=1080, P=60, blkH=372, gap=22, heroH=290, band=400;
   const H=(hr?band+heroH-90+46:band+46)+rows.length*(blkH+gap)-gap+150, SC=2;
   const cv=document.createElement("canvas"); cv.width=W*SC; cv.height=H*SC;
@@ -2479,7 +2503,7 @@ async function meetCard(o){
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,band); ctx.clip(); ctx.strokeStyle="rgba(255,255,255,.07)"; ctx.lineWidth=34;
   for(let x=-band;x<W+band;x+=90){ ctx.beginPath(); ctx.moveTo(x,band); ctx.lineTo(x+band,0); ctx.stroke(); } ctx.restore();
   if(lg){ const lw=200, lh=lw*lg.height/lg.width, bx=W-P-lw-30, by=P-14; ctx.save(); ctx.shadowColor="rgba(0,0,0,.25)"; ctx.shadowBlur=24; rr(bx,by,lw+60,lh+28,22); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore(); ctx.drawImage(lg,bx+30,by+14,lw,lh); }
-  ctx.fillStyle="#9CC2FF"; ctx.font=`700 26px ${FD}`; spaced("MEET RESULTS",P,P+28,6);
+  ctx.fillStyle="#9CC2FF"; ctx.font=`700 26px ${FD}`; spaced(isMeet?"MEET RESULTS":"MONTHLY PROGRESS",P,P+28,6);
   const name=o.name.toUpperCase();
   ctx.fillStyle="#fff"; const ns=fit(name,W-2*P-300,104,"800"); ctx.fillText(name,P,P+56+ns*.9);
   ctx.fillStyle="#CFE0FF"; ctx.font=`600 30px ${FD}`; spaced(o.label+"   |   "+o.range,P,P+56+ns*.9+50,1.5);
@@ -2500,10 +2524,10 @@ async function meetCard(o){
     const x=P, w=W-2*P, yy=y+i*(blkH+gap), c=r.st==="pb"?OK:r.st==="slow"?BAD:"#94A3B8";
     ctx.save(); ctx.shadowColor="rgba(11,43,102,.10)"; ctx.shadowBlur=24; ctx.shadowOffsetY=8; rr(x,yy,w,blkH,26); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore();
     ctx.save(); rr(x,yy,w,blkH,26); ctx.clip(); ctx.fillStyle=c; ctx.fillRect(x,yy,10,blkH); ctx.restore();
-    const pc=x+70, py=yy+62, pod=r.place&&r.place<=3;
+    const pc=x+70, py=yy+62, pod=isMeet&&r.place&&r.place<=3;
     ctx.beginPath(); ctx.arc(pc,py,36,0,7); ctx.fillStyle=pod?NAVY:"#EEF2F8"; ctx.fill();
     ctx.textAlign="center"; ctx.fillStyle=pod?"#fff":NAVY; ctx.font=`800 ${r.place?34:22}px ${FD}`; ctx.fillText(r.place||"–",pc,py+12);
-    ctx.fillStyle=MUTED; ctx.font=`700 15px ${FD}`; ctx.fillText("PLACE",pc,py+58); ctx.textAlign="left";
+    ctx.fillStyle=MUTED; ctx.font=`700 15px ${FD}`; ctx.fillText(isMeet?"PLACE":"SWIMS",pc,py+58); ctx.textAlign="left";
     ctx.fillStyle=INK; ctx.font=`700 40px ${FD}`; ctx.fillText(r.ev.toUpperCase(),x+130,yy+60);
     ctx.font=`800 22px ${FD}`; const bt=badgeTxt(r), bw=ctx.measureText(bt).width+34;
     rr(x+130,yy+78,bw,38,19); ctx.fillStyle=r.st==="pb"?OK:r.st==="slow"?BAD:"#E2E8F0"; ctx.fill();
@@ -2554,6 +2578,10 @@ async function openMeetCards(m,ids){
     if(!o.name){ skip.push(state.swimmers.find(s=>s.id===id)?.name||""); continue; }
     out.push({o,png:await meetCard(o)}); }
   if(!out.length){ toast(skip.length===1?`ضيف الاسم بالإنجليزي لـ${skip[0]} من "تعديل" في صفحته`:"ضيف الأسماء بالإنجليزي من \"تعديل\" في صفحة كل سباح"); return; }
+  showCards(out,skip);
+}
+/* شاشة المعاينة وزراير الإرسال — مشتركة بين كارت البطولة وكارت الشهر */
+function showCards(out,skip){
   mcItems=out;
   document.getElementById("imgov")?.remove();
   const d=document.createElement("div"); d.id="imgov"; d.className="imgov";
@@ -2576,6 +2604,146 @@ async function sendMeetCard(kind,i,btn){
     if(ok===false&&kind!=="all") toast("معرفتش أبعت الملف، جرّب تاني");
   }catch(e){ toast("معرفتش أجهز الكارت، جرّب تاني"); }
   btn.disabled=false; btn.textContent=old;
+}
+
+/* ===== كارت الشهر لولي الأمر: أرقام التمرين والقياسات في شهر واحد — بيقرا بس ===== */
+const MONTHS_EN=["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
+/* كل أرقام التمرين للسباح: التيستات + القياسات (القياس المنسوخ للبطولة مايتحسبش مرتين) */
+function trainingOf(id){
+  const rs=state.results.filter(r=>r.swimmer===id&&r.kind!=="race").map(r=>({date:r.date,t:r.t,stroke:r.stroke,dist:+r.dist,pool:+(r.pool||20),at:r.at||0}));
+  const ms=state.meas.filter(m=>m.swimmer===id&&m.tot&&!(m.rid&&state.results.some(r=>r.id===m.rid)))
+    .map(m=>({date:m.date,t:m.tot,stroke:m.stroke,dist:+m.dist,pool:+(m.pool||20),at:0}));
+  return rs.concat(ms).filter(x=>x.date&&x.t);
+}
+function monthCardData(id,ym){
+  const sw=state.swimmers.find(s=>s.id===id); if(!sw) return null;
+  const all=trainingOf(id), inM=all.filter(x=>x.date.slice(0,7)===ym); if(!inM.length) return {empty:true};
+  const g={}; inM.forEach(x=>{ const k=x.dist+"|"+x.stroke+"|"+x.pool; (g[k]=g[k]||[]).push(x); });
+  const rows=Object.entries(g).sort((a,b)=>b[1].length-a[1].length).slice(0,6).map(([k,list])=>{
+    const [dist,stroke,pool]=k.split("|"), best=list.reduce((a,x)=>x.t<a.t?x:a);
+    const before=all.filter(x=>x.dist==dist&&x.stroke===stroke&&x.pool==pool&&x.date<ym+"-01").sort(byDate);
+    const prev=before.length?Math.min(...before.map(x=>x.t)):null, d=prev==null?null:best.t-prev;
+    const st=prev==null?"first":d<-0.005?"pb":d>0.005?"slow":"same";
+    /* الرسم: آخر 7 قبل الشهر + أحسن رقم في الشهر */
+    const hist=before.slice(-7).concat([best]).map(x=>({d:dmy(x.date).slice(0,5),t:x.t}));
+    return {ev:`${dist} m ${STROKE_EN[stroke]||stroke}`,t:best.t,place:list.length,st,d:d==null?0:Math.abs(d),hist};
+  });
+  const age=ageOf(sw), [y,mo]=ym.split("-");
+  return {monthly:true,name:(sw.nameEn||"").trim(),label:(sw.sex==="f"?"GIRLS":"BOYS")+(age?" · "+(AGE_EN[age]||age):""),
+    range:MONTHS_EN[+mo-1]+" "+y,rows,file:`Monthly-Progress-${(sw.nameEn||"swimmer").trim().replace(/[^A-Za-z0-9]+/g,"-")}-${ym}`};
+}
+async function openMonthCard(id,ym){
+  const o=monthCardData(id,ym); if(!o) return;
+  if(o.empty){ toast("مفيش أرقام تمرين أو قياسات في الشهر ده"); return; }
+  if(!o.name){ toast("ضيف الاسم بالإنجليزي من \"تعديل\" في صفحة السباح"); return; }
+  showCards([{o,png:await meetCard(o)}],[]);
+}
+const ymOf=back=>{ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-back); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); };
+
+/* ===== ستوب ووتش: توقيت بالأطوال، وبعدين الأرقام تروح لفورمة القياسات تراجعها وتحفظها ===== */
+const SW_={on:false,t0:0,laps:[],total:null,raf:0};
+function swCfg(){ const c=state.swc||(state.swc={sw:mSwId(),st:"free",dist:50,pool:25}); if(!state.swimmers.some(s=>s.id===c.sw)) c.sw=mSwId(); return c; }
+function swLapsN(){ const c=swCfg(); return mLaps(c.dist,c.pool); }
+function swNow(){ return SW_.on?(performance.now()-SW_.t0)/1000:(SW_.total||0); }
+function swDraw(){
+  const ov=document.getElementById("swov"); if(!ov) return;
+  const c=swCfg(), n=swLapsN(), done=!SW_.on&&SW_.total!=null, idle=!SW_.on&&SW_.total==null;
+  const opt=(arr,v,f)=>arr.map(x=>`<option value="${x[0]}" ${String(x[0])===String(v)?"selected":""}>${esc(x[1])}</option>`).join("");
+  ov.innerHTML=`<div class="swbox">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">⏱ ستوب ووتش</h2><button class="btn ghost small" data-swa="close">قفل</button></div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <div class="field" style="margin:0;min-width:140px"><label for="swS">السباح</label><select id="swS" class="swc" ${idle?"":"disabled"}>${opt(state.swimmers.map(s=>[s.id,s.name]),c.sw)}</select></div>
+      <div class="field" style="margin:0;max-width:100px"><label for="swSt">النوع</label><select id="swSt" class="swc" ${idle?"":"disabled"}>${opt(Object.entries(STROKES),c.st)}</select></div>
+      <div class="field" style="margin:0;max-width:86px"><label for="swD">المسافة</label><select id="swD" class="swc" ${idle?"":"disabled"}>${opt(MDISTS.map(x=>[x,x]),c.dist)}</select></div>
+      <div class="field" style="margin:0;max-width:86px"><label for="swP">المسبح</label><select id="swP" class="swc" ${idle?"":"disabled"}>${opt(MPOOLS.map(x=>[x,x]),c.pool)}</select></div>
+    </div>
+    <div class="swtime" id="swTime">${fmt(swNow())}</div>
+    <p class="note" style="text-align:center;margin:0 0 10px">${n?`طول ${Math.min(SW_.laps.length+(SW_.on?1:0),n)||0} من ${n}`:"المسافة دي مش بتتقسم أطوال — دوس وقّف في الآخر"}</p>
+    ${SW_.on?`${n?`<button class="btn swbig" data-swa="lap">طول ✓</button>`:""}<button class="btn ghost swbig" data-swa="stop" style="margin-top:12px">وقّف</button>`
+      :idle?`<button class="btn swbig" data-swa="start">ابدأ</button>`
+      :`<button class="btn swbig" data-swa="save">احفظ في القياسات</button><button class="btn ghost" data-swa="reset" style="margin-top:12px;width:100%">من الأول</button>`}
+    ${SW_.laps.length?`<div class="panel" style="margin-top:14px">${SW_.laps.map((t,i)=>`<div class="rank" style="grid-template-columns:1fr auto"><span>طول ${i+1}</span><span class="t">${t.toFixed(2)}</span></div>`).join("")}</div>`:""}
+    ${done&&n&&SW_.laps.length!==n?`<p class="note">وقفت قبل آخر طول، فالأطوال مش هتتحفظ — الزمن الكلي بس.</p>`:""}
+  </div>`;
+}
+function swTick(){ const el=document.getElementById("swTime"); if(el) el.textContent=fmt(swNow()); if(SW_.on) SW_.raf=requestAnimationFrame(swTick); }
+function openStopwatch(){ if(!state.swimmers.length){ toast("ضيف سباح الأول"); return; }
+  document.getElementById("swov")?.remove(); const ov=document.createElement("div"); ov.id="swov"; ov.className="swov"; document.body.appendChild(ov); keepAwake(); swDraw(); }
+function closeStopwatch(){ if(SW_.on) return; cancelAnimationFrame(SW_.raf); document.getElementById("swov")?.remove(); if(state.view!=="pool") releaseAwake(); }
+function swAct(a){
+  const n=swLapsN();
+  if(a==="start"){ SW_.on=true; SW_.t0=performance.now(); SW_.laps=[]; SW_.total=null; swDraw(); swTick(); return; }
+  if(a==="lap"&&SW_.on){ const el=swNow(), sum=SW_.laps.reduce((x,y)=>x+y,0); SW_.laps.push(+(el-sum).toFixed(2));
+    if(n&&SW_.laps.length>=n){ SW_.on=false; SW_.total=+el.toFixed(2); cancelAnimationFrame(SW_.raf); } swDraw(); if(SW_.on) swTick(); return; }
+  if(a==="stop"&&SW_.on){ SW_.on=false; SW_.total=+swNow().toFixed(2); cancelAnimationFrame(SW_.raf); swDraw(); return; }
+  if(a==="reset"){ SW_.on=false; SW_.laps=[]; SW_.total=null; swDraw(); return; }
+  if(a==="close"){ if(SW_.on){ toast("وقّف التوقيت الأول"); return; } closeStopwatch(); return; }
+  if(a==="save"&&SW_.total!=null){ const c=swCfg();
+    const d={mDate:today(),mSt:c.st,mD:String(c.dist),mP:String(c.pool),mT:fmt(SW_.total),mN:"",mAlso:false};
+    if(n&&SW_.laps.length===n) SW_.laps.forEach((t,i)=>{ d["mL"+i]=t.toFixed(2); });
+    state.mSw=c.sw; state.medit=null; state.mdraft=d; SW_.laps=[]; SW_.total=null;
+    closeStopwatch(); state.view="meas"; render(); scrollTo(0,0); toast("راجع الأرقام ودوس احفظ القياس"); }
+}
+
+/* ===== مقارنة سباحين على رسم واحد ===== */
+function compareView(){
+  if(state.swimmers.length<2) return `<h2>مقارنة سباحين</h2><div class="panel empty">محتاج سباحين اتنين على الأقل.</div>`;
+  const c=state.cpf||(state.cpf=(()=>{ const t=topEvent(); return {a:state.swimmers[0].id,b:state.swimmers[1].id,stroke:t?.stroke||"free",dist:t?.dist||40,pool:t?.pool||20,kind:"all"}; })());
+  if(!state.swimmers.some(s=>s.id===c.a)) c.a=state.swimmers[0].id;
+  if(!state.swimmers.some(s=>s.id===c.b)) c.b=state.swimmers.find(s=>s.id!==c.a).id;
+  const sel=(id,v)=>`<select id="${id}" class="cpf">${state.swimmers.map(s=>`<option value="${s.id}" ${s.id===v?"selected":""}>${esc(s.name)}</option>`).join("")}</select>`;
+  const pick=id=>state.results.filter(r=>r.swimmer===id&&r.stroke===c.stroke&&r.dist==c.dist&&(r.pool||20)==c.pool&&(c.kind==="all"||(c.kind==="race"?r.kind==="race":r.kind!=="race"))).sort(byDate);
+  const A=pick(c.a), B=pick(c.b), nm=id=>state.swimmers.find(s=>s.id===id)?.name||"";
+  const CA="var(--water)", CB="var(--rope-r)";
+  let svg=`<p class="empty">مفيش أرقام للاتنين في ${c.dist}م ${STROKES[c.stroke]} حمام ${c.pool}.</p>`;
+  const pts=A.concat(B);
+  if(pts.length){
+    const W=320,H=190,P=30, ds=pts.map(r=>Date.parse(r.date)), d0=Math.min(...ds), d1=Math.max(...ds), ts=pts.map(r=>r.t), lo=Math.min(...ts), hi=Math.max(...ts);
+    const X=r=>d1>d0?W-P-(Date.parse(r.date)-d0)/(d1-d0)*(W-2*P):W/2;   // الأحدث على الشمال زي باقي الرسومات
+    const Y=r=>hi>lo?P/2+(r.t-lo)/(hi-lo)*(H-P*1.8):H/2;
+    const line=(L,col)=>L.length?`${L.length>1?`<polyline fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" points="${L.map(r=>X(r).toFixed(1)+","+Y(r).toFixed(1)).join(" ")}"/>`:""}
+      ${L.map(r=>`<circle cx="${X(r).toFixed(1)}" cy="${Y(r).toFixed(1)}" r="4" fill="${col}"><title>${esc(r.date)}: ${fmt(r.t)}</title></circle>`).join("")}`:"";
+    svg=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="مقارنة">
+      <text x="${W-4}" y="${P/2+4}" font-size="10" fill="var(--muted)" text-anchor="end">أسرع ↑</text>
+      <text x="4" y="${P/2+4}" font-size="10" fill="var(--muted)">${fmt(lo)}</text>
+      ${hi>lo?`<text x="4" y="${H-P*1.3+4}" font-size="10" fill="var(--muted)">${fmt(hi)}</text>`:""}
+      ${line(A,CA)}${line(B,CB)}
+      <text x="${W-P}" y="${H-4}" font-size="10" fill="var(--muted)" text-anchor="middle">${new Date(d0).toISOString().slice(5,10)}</text>
+      ${d1>d0?`<text x="${P}" y="${H-4}" font-size="10" fill="var(--muted)" text-anchor="middle">${new Date(d1).toISOString().slice(5,10)}</text>`:""}
+    </svg>`;
+  }
+  const stat=(L)=>L.length?`أحسن ${fmt(Math.min(...L.map(r=>r.t)))} · آخر ${fmt(L[L.length-1].t)} · ${L.length} مرة`:"مفيش أرقام";
+  const bA=A.length?Math.min(...A.map(r=>r.t)):null, bB=B.length?Math.min(...B.map(r=>r.t)):null;
+  return `<h2>مقارنة سباحين</h2>
+  <div class="panel">
+    <div class="row">
+      <div class="field"><label for="cpA">السباح الأول</label>${sel("cpA",c.a)}</div>
+      <div class="field"><label for="cpB">السباح التاني</label>${sel("cpB",c.b)}</div>
+    </div>
+    <div class="row">
+      <div class="field" style="max-width:110px"><label for="cpSt">النوع</label><select id="cpSt" class="cpf">${Object.entries(STROKES).map(([k,v])=>`<option value="${k}" ${c.stroke===k?"selected":""}>${v}</option>`).join("")}</select></div>
+      <div class="field" style="max-width:100px"><label for="cpD">المسافة</label><select id="cpD" class="cpf">${DISTS.map(d=>`<option ${d==c.dist?"selected":""}>${d}</option>`).join("")}</select></div>
+      <div class="field" style="max-width:100px"><label for="cpP">الحمام</label><select id="cpP" class="cpf">${[20,25,50].map(p=>`<option value="${p}" ${p==c.pool?"selected":""}>${p} م</option>`).join("")}</select></div>
+    </div>
+    <div class="chips">${[["all","الكل"],["test","القياسات"],["race","البطولات"]].map(([k,l])=>`<button class="chip" data-cpk="${k}" aria-pressed="${c.kind===k}">${l}</button>`).join("")}</div>
+  </div>
+  <div class="panel" style="margin-top:10px">${svg}
+    <p style="margin:8px 0 0"><b style="color:var(--water)">●</b> <bdi>${esc(nm(c.a))}</bdi>: <span class="lmeta">${stat(A)}</span></p>
+    <p style="margin:4px 0 0"><b style="color:var(--rope-r)">●</b> <bdi>${esc(nm(c.b))}</bdi>: <span class="lmeta">${stat(B)}</span></p>
+    ${bA!=null&&bB!=null?`<p class="note">الفرق في أحسن رقم: <span style="direction:ltr;display:inline-block">${Math.abs(bA-bB).toFixed(2)}</span> ث لصالح <bdi>${esc(nm(bA<=bB?c.a:c.b))}</bdi>.</p>`:""}
+  </div>`;
+}
+
+/* ===== "فيه نسخة جديدة": الـ service worker بيقول لو جاب نسخة أحدث من اللي مفتوحة ===== */
+function checkUpdate(){
+  try{ const c=navigator.serviceWorker&&navigator.serviceWorker.controller; if(!c) return;
+    const ch=new MessageChannel(); ch.port1.onmessage=e=>{ if(e.data===true) showUpdateBar(); }; c.postMessage("safwa-check",[ch.port2]); }catch(e){}
+}
+function showUpdateBar(){
+  if(document.getElementById("updbar")) return;
+  const b=document.createElement("button"); b.id="updbar"; b.type="button"; b.className="updbar"; b.textContent="فيه نسخة جديدة من التطبيق — دوس هنا للتحديث";
+  b.addEventListener("click",()=>{ if(SW_.on){ toast("وقّف الستوب ووتش الأول"); return; } location.reload(); });
+  document.body.appendChild(b);
 }
 /* --- وضع الحمام --- */
 const POOLKEY=()=>"safwa_pool_"+today();
@@ -2694,7 +2862,7 @@ function poolView(){
       ${(it.specs||[]).map(x=>`<span class="pm-n"><bdi>${esc(x.names)}</bdi></span>${x.lines.map(l=>`<span class="pm-l">${esc(l)}</span>`).join("")}`).join("")}
     </button>`; };
   return `<button class="more" data-go="plan">→ رجوع للبرنامج</button>
-  <h2 style="margin:6px 0 4px">وضع الحمام</h2>${planWho()}
+  <div class="row" style="justify-content:space-between;margin:6px 0 4px"><h2 style="margin:0">وضع الحمام</h2><button class="btn ghost small" data-swopen="1">⏱ ستوب ووتش</button></div>${planWho()}
   <div class="chips">${dayChips}</div>${grpChips}
   ${info?`<p class="note" style="margin:0 0 6px">${esc(info)}</p>`:""}
   ${notes.map(t=>`<div class="warn tip">💡 <span>${esc(t)}</span></div>`).join("")}
@@ -2729,6 +2897,8 @@ function raceView(){
       <input id="x-t-${i}" class="num xt" data-i="${i}" inputmode="decimal" value="${esc(d["t"+i]||"")}" placeholder=""></div>
     <div class="field" style="max-width:74px;margin:0"><label for="x-r-${i}">المركز</label>
       <input id="x-r-${i}" class="num" inputmode="numeric" value="${esc(d["r"+i]||"")}"></div>
+    <div class="field" style="max-width:100px;margin:0"><label for="x-f-${i}">النص الأول</label>
+      <input id="x-f-${i}" class="num" inputmode="decimal" value="${esc(d["f"+i]||"")}" placeholder="اختياري"></div>
   </div>`;
   const prev=state.results.filter(r=>r.swimmer===c.sw&&r.kind==="race").sort(byDate).reverse().slice(0,4);
   return `<h2>أرقام البطولة</h2>
@@ -2782,7 +2952,7 @@ function boardView(){
 }
 const NAV=[["home","الفريق","🏊"],["meas","قياسات","📐"],["race","البطولة","🏅"],["tools","أدوات","🧰"],["settings","إعدادات","⚙️"]];
 function navBar(){
-  const cur=["goals","relay","conv","board","meets","picks","plan","card","pool","cplan","ccard","log"].includes(state.view)?"tools":(state.view==="swimmer"||state.view==="cmp")?"home":state.view;
+  const cur=["goals","relay","conv","board","meets","picks","plan","card","pool","cplan","ccard","log","compare"].includes(state.view)?"tools":(state.view==="swimmer"||state.view==="cmp")?"home":state.view;
   const bar=$("#tabbar"); if(bar) bar.innerHTML=NAV.map(([v,l,ic])=>`<button data-go="${v}" aria-current="${v===cur}"><i>${ic}</i>${l}</button>`).join("");
   return "";
 }
@@ -2798,7 +2968,9 @@ function toolsView(){
   <button class="card" data-msum="1"><b>📋 ملخص آخر بطولة</b><span>مين كسر رقمه، ومين حقق هدفه، ومين على المنصة أو قريب منها.</span></button>
   <button class="card" data-go="pool"><b>🏊‍♂️ وضع الحمام</b><span>تمرينة النهارده بخط كبير، وتعلّم على كل بيت وانت بتخلصه.</span></button>
   <button class="card" data-go="relay"><b>🏊 التتابع</b><span>أحسن 4 للتتابع الحر والمتنوع بالترتيب والمجموع التقديري.</span></button>
-  <button class="card" data-go="conv"><b>⇄ تحويل الأوقات</b><span>من حمام 20م لـ25 أو 50، وبين المسافات.</span></button>`;
+  <button class="card" data-go="conv"><b>⇄ تحويل الأوقات</b><span>من حمام 20م لـ25 أو 50، وبين المسافات.</span></button>
+  <button class="card" data-go="compare"><b>📈 مقارنة سباحين</b><span>سباحين اتنين على رسم واحد في نفس السباق، وأحسن رقم لكل واحد والفرق.</span></button>
+  <button class="card" data-swopen="1"><b>⏱ ستوب ووتش</b><span>وقّت السباح بالأطوال، والأرقام تتسجل في القياسات على طول.</span></button>`;
 }
 function settingsView(){
   const b=state.backup;
@@ -2953,7 +3125,7 @@ function ccardView(){
 
 function render(){
   const app=$("#app");
-  app.innerHTML=navBar()+(state.view==="meas"?measView():state.view==="cplan"?cplanView():state.view==="ccard"?ccardView():state.view==="plan"?planView():state.view==="card"?cardView():state.view==="picks"?picksView():state.view==="meets"?meetsView():state.view==="board"?boardView():state.view==="tools"?toolsView():state.view==="settings"?settingsView():state.view==="race"?raceSection():state.view==="goals"?goalsView():state.view==="relay"?relayView():state.view==="conv"?convView():state.view==="cmp"?cmpView():state.view==="log"?logView():state.view==="swimmer"?swimmerView():state.view==="pool"?poolView():home());
+  app.innerHTML=navBar()+(state.view==="meas"?measView():state.view==="cplan"?cplanView():state.view==="ccard"?ccardView():state.view==="plan"?planView():state.view==="card"?cardView():state.view==="picks"?picksView():state.view==="meets"?meetsView():state.view==="board"?boardView():state.view==="tools"?toolsView():state.view==="settings"?settingsView():state.view==="race"?raceSection():state.view==="goals"?goalsView():state.view==="relay"?relayView():state.view==="conv"?convView():state.view==="cmp"?cmpView():state.view==="log"?logView():state.view==="swimmer"?swimmerView():state.view==="pool"?poolView():state.view==="compare"?compareView():home());
   ltrNums(app);
   if(state.view==="pool") keepAwake(); else releaseAwake();
   if(mode==="warm") app.insertAdjacentHTML("afterbegin",`<p class="note" style="text-align:center">بيحدّث بياناتك…</p>`);
@@ -2998,8 +3170,8 @@ function liveCapture(e){
   if(lg){ state.draft=state.draft||{}; state.draft["sw"+lg[1]]=t.value; return; }
   lg=/^g-(st|d|t)-(\d+)-(\d+)$/.exec(t.id||"");
   if(lg){ state.draft=state.draft||{}; state.draft[`${lg[1]}${lg[2]}_${lg[3]}`]=t.value; return; }
-  const m=/^x-(st|d|t|r)-(\d+)$/.exec(t.id||"");
-  if(m){ state.rdraft=state.rdraft||{}; state.rdraft[({st:"st",d:"d",t:"t",r:"r"})[m[1]]+m[2]]=t.value; return; }
+  const m=/^x-(st|d|t|r|f)-(\d+)$/.exec(t.id||"");
+  if(m){ state.rdraft=state.rdraft||{}; state.rdraft[m[1]+m[2]]=t.value; return; }
 
   if(t.id==="mAlso"){ state.mdraft=state.mdraft||{}; state.mdraft.mAlso=t.checked; return; }
   if(/^(mDate|mSt|mD|mP|mT|mN)$/.test(t.id||"")||/^mL\d+$/.test(t.id||"")){
@@ -3023,6 +3195,12 @@ document.addEventListener("change",e=>{
   }
   if(e.target.classList.contains("gf")){
     state.gf={sw:$("#gSw").value,stroke:$("#gSt").value,dist:+$("#gD").value,pool:+$("#gP").value}; render(); return;
+  }
+  if(e.target.classList.contains("swc")){
+    const c=swCfg(); Object.assign(c,{sw:$("#swS").value,st:$("#swSt").value,dist:+$("#swD").value,pool:+$("#swP").value}); swDraw(); return;
+  }
+  if(e.target.classList.contains("cpf")){
+    Object.assign(state.cpf,{a:$("#cpA").value,b:$("#cpB").value,stroke:$("#cpSt").value,dist:+$("#cpD").value,pool:+$("#cpP").value}); render(); return;
   }
   if(e.target.classList.contains("cf2")){
     Object.assign(state.bf,{meet:$("#bfMeet").value,age:$("#bfAge").value,sex:$("#bfSex").value,pool:+$("#bfP").value}); return;
@@ -3158,6 +3336,36 @@ document.addEventListener("click",async ev=>{
     const old=t.textContent; t.disabled=true; t.textContent="بيجهز…";
     try{ await once("mcard",()=>openMeetCards(m,ids)); }catch(e){ toast("معرفتش أجهز الكارت، جرّب تاني"); }
     t.disabled=false; t.textContent=old; return; }
+  /* تعديل وقت متسجل */
+  if(t.dataset.redit){ const id=t.dataset.redit, lm=state.meas.find(m=>m.rid===id);
+    if(lm){ mEdit(lm.id); state.view="meas"; render(); scrollTo(0,0); toast("الوقت ده جاي من القياسات — عدّله من هنا"); return; }
+    state.rEdit=id; render(); return; }
+  if(t.id==="reCancel"){ state.rEdit=null; render(); return; }
+  if(t.dataset.resave){
+    const id=t.dataset.resave, r=state.results.find(x=>x.id===id); if(!r){ state.rEdit=null; render(); return; }
+    const tt=parseTime($("#reT")?.value||""); if(!tt){ toast("اكتب الوقت"); return; }
+    const tb=timeBad(tt,r.dist); if(tb){ toast(tb); return; }
+    const date=$("#reDate")?.value||r.date, {id:_,...rest}=r, nr={...rest,t:tt,date};
+    if(r.kind==="race"){
+      nr.rank=+normDigits($("#reRank")?.value||"")||null;
+      const fr=($("#reFirst")?.value||"").trim(), ft=fr?parseTime(fr):null;
+      if(fr&&!ft){ toast("النص الأول مش مفهوم"); return; }
+      if(ft&&(ft>=tt||ft<tt*0.35)){ toast(`النص الأول ${fmt(ft)} مش منطقي مع الوقت ${fmt(tt)}`); return; }
+      if(ft){ nr.first=+ft.toFixed(2); nr.second=+(tt-ft).toFixed(2); } else { nr.first=null; nr.second=null; }
+    } else if(r.first&&r.second){ /* لو الوقت اتغير النص التاني يتحسب من جديد */
+      if(r.first<tt) nr.second=+(tt-r.first).toFixed(2); else { nr.first=null; nr.second=null; } }
+    await once("resave",async()=>{ t.disabled=true;
+      try{ await store.put("results",id,nr); state.rEdit=null; toast("اتعدّل"); render(); }
+      catch(e){ toast("ماتعدّلش، جرّب تاني"); t.disabled=false; } });
+    return; }
+  /* كارت الشهر */
+  if(t.dataset.mcm!==undefined&&state.sel){ const old=t.textContent; t.disabled=true; t.textContent="بيجهز…";
+    try{ await once("mcm",()=>openMonthCard(state.sel,ymOf(+t.dataset.mcm))); }catch(e){ toast("معرفتش أجهز الكارت، جرّب تاني"); }
+    t.disabled=false; t.textContent=old; return; }
+  /* ستوب ووتش ومقارنة */
+  if(t.dataset.swopen){ openStopwatch(); return; }
+  if(t.dataset.swa){ if(!["start","lap","stop"].includes(t.dataset.swa)) swAct(t.dataset.swa); return; }
+  if(t.dataset.cpk){ state.cpf.kind=t.dataset.cpk; render(); return; }
   if(t.dataset.swk){ state.swKind=t.dataset.swk; state.event=null; state.histAll=false; render(); return; }
   if(t.id==="mrOpen"){ state.meetRen=state.meetKey; render(); return; }
   if(t.id==="mrCancel"){ state.meetRen=null; render(); return; }
@@ -3219,7 +3427,11 @@ document.addEventListener("click",async ev=>{
     keepRace(); const d=state.rdraft||{}, rows=[];
     for(let i=0;i<c.n;i++){ const raw=(d["t"+i]||"").trim(); if(!raw) continue;
       const tt=parseTime(raw); if(!tt){toast("وقت مش مفهوم: "+raw);return;}
-      rows.push({stroke:d["st"+i]||"free",dist:+(d["d"+i]||50),t:tt,rank:+normDigits(d["r"+i]||"")||null,i}); }
+      /* النص الأول اختياري: لازم يكون أقل من الوقت ومش أقل من 35% منه */
+      const fr=(d["f"+i]||"").trim(), ft=fr?parseTime(fr):null;
+      if(fr&&!ft){toast("النص الأول مش مفهوم: "+fr);return;}
+      if(ft&&(ft>=tt||ft<tt*0.35)){toast(`النص الأول ${fmt(ft)} مش منطقي مع الوقت ${fmt(tt)}`);return;}
+      rows.push({stroke:d["st"+i]||"free",dist:+(d["d"+i]||50),t:tt,rank:+normDigits(d["r"+i]||"")||null,first:ft,i}); }
     if(!rows.length){toast("اكتب وقت واحد على الأقل");return;}
     const odd=rows.map(x=>timeBad(x.t,x.dist)).find(Boolean); if(odd){toast(odd);return;}
     if(busy.has("rSave")) return;
@@ -3230,10 +3442,11 @@ document.addEventListener("click",async ev=>{
       for(const x of rows){
         const r={swimmer:swid,stroke:x.stroke,dist:x.dist,pool,t:x.t,date,kind:"race",note:meet,at:Date.now()+n};
         if(x.rank) r.rank=x.rank;
+        if(x.first){ r.first=+x.first.toFixed(2); r.second=+(x.t-x.first).toFixed(2); }
         const same=state.results.filter(o=>o.swimmer===swid&&o.stroke===x.stroke&&o.dist==x.dist&&(o.pool||20)==pool);
         cmp.push({r,old:prevOf(r,same),best:same.length?Math.min(...same.map(o=>o.t)):Infinity});
         await store.addResult(r); n++;
-        delete d["t"+x.i]; delete d["r"+x.i];   // اتحفظ: يتشال من الفورمة عشان مايتكررش
+        delete d["t"+x.i]; delete d["r"+x.i]; delete d["f"+x.i];   // اتحفظ: يتشال من الفورمة عشان مايتكررش
       }
       Object.assign(state.race,{meet,date,pool,sw:swid,n:1});
       state.rdraft={}; state.meetKey=null; state.meetSeek={name:meet||"بدون اسم",date}; state.cmp=cmp; state.view="cmp"; render(); scrollTo(0,0);
@@ -3460,6 +3673,12 @@ document.addEventListener("click",e=>{
   try{ sample=await window.claude.use("sample"); if(sample) render(); }catch(e){}
   try{ dl=await window.claude.use("downloads"); }catch(e){}
 })();
+/* الستوب ووتش بيشتغل أول ما الصباع يلمس الزرار (أدق من click) */
+document.addEventListener("pointerdown",e=>{ const b=e.target.closest&&e.target.closest("[data-swa]");
+  if(b&&["start","lap","stop"].includes(b.dataset.swa)){ e.preventDefault(); swAct(b.dataset.swa); } });
+/* "فيه نسخة جديدة": نسأل الـ service worker بعد الفتح وكل ما التطبيق يرجع قدامك */
+addEventListener("load",()=>{ setTimeout(checkUpdate,4000); setTimeout(checkUpdate,15000); });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") setTimeout(checkUpdate,3000); });
 /* لما النت يقطع أو يرجع، العلامة اللي فوق تتحدّث (من غير ما تبوّظ فورمة بتتكتب) */
 addEventListener("online",softRender); addEventListener("offline",softRender);
 if("serviceWorker" in navigator)
