@@ -2718,7 +2718,8 @@ function seasonCardData(id,year){
   return {name:(sw.nameEn||"").trim(),label:(sw.sex==="f"?"GIRLS":"BOYS")+(age?" · "+(AGE_EN[age]||age):""),season:year+" SEASON",
     meets,pbs,medals,best,prog,file:`Season-Report-${(sw.nameEn||"swimmer").trim().replace(/[^A-Za-z0-9]+/g,"-")}-${year}`};
 }
-async function seasonCard(o){
+/* اسمها مختلف عن seasonCard(sw) — دي بتاعة قسم "ملخص الموسم" في صفحة السباح */
+async function seasonReportCard(o){
   const FD='"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif';
   try{ await Promise.all(["800 40px","700 40px","600 40px","italic 800 40px"].map(f=>document.fonts.load(f+' "Barlow Semi Condensed"'))); }catch(e){}
   const lg=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=CARD_LOGO;});
@@ -2777,7 +2778,7 @@ async function openSeasonCard(id){
   const o=seasonCardData(id,last.date.slice(0,4));
   if(!o||o.empty){ toast("مفيش نتايج بطولات في الموسم ده"); return; }
   if(!o.name){ toast("ضيف الاسم بالإنجليزي من \"تعديل\" في صفحة السباح"); return; }
-  showCards([{o,png:await seasonCard(o)}],[]);
+  showCards([{o,png:await seasonReportCard(o)}],[]);
 }
 
 /* ===== ستوب ووتش: سباح واحد (الأرقام تروح لفورمة القياسات تراجعها) أو 2-4 سباحين مع بعض (بيتحفظوا مرة واحدة بعد المراجعة) ===== */
