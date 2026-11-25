@@ -235,6 +235,11 @@ p.h2{font-weight:600}
 .swbig{display:block;width:100%;padding:26px 16px!important;font-size:26px!important;border-radius:20px!important;touch-action:manipulation}
 /* شريط "فيه نسخة جديدة" */
 .updbar{position:fixed;inset-inline:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:70;border:0;border-radius:12px;padding:12px 14px;background:var(--water);color:#fff;font:inherit;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.swlanes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.swlane{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center}
+.swlane.fin{border-color:var(--good)}
+.swlane .swlt{font:700 30px/1.2 "IBM Plex Sans Arabic",Tahoma,sans-serif;direction:ltr;font-variant-numeric:tabular-nums;margin-bottom:8px}
+.swlane .swbig{padding:22px 8px!important;font-size:22px!important}
 .offbar{position:sticky;top:0;z-index:15;margin:0 0 10px;padding:8px 12px;border-radius:10px;background:var(--bad);color:#fff;font-size:14px;font-weight:600;text-align:center}
 .outbtn{display:block;margin:18px auto 8px;background:none;border:1px solid var(--line,#ccc);color:inherit;opacity:.75;border-radius:9px;padding:5px 14px;font:inherit;font-size:13px;cursor:pointer}
 </style>
@@ -1318,7 +1323,7 @@ function swimmerView(){
     <div class="row"><button class="btn" id="edSave">احفظ التعديل</button><button class="btn ghost" id="edCancel">إلغاء</button>
       <button class="x" id="edDel" style="margin-inline-start:auto;color:var(--bad)">امسح السباح</button></div>
   </div>`:""}
-  <div class="row" style="gap:8px;margin-top:12px"><button class="btn ghost small" data-mcm="0">📤 كارت الشهر ده</button><button class="btn ghost small" data-mcm="1">كارت الشهر اللي فات</button></div>
+  <div class="row" style="gap:8px;margin-top:12px"><button class="btn ghost small" data-mcm="0">📤 كارت الشهر ده</button><button class="btn ghost small" data-mcm="1">كارت الشهر اللي فات</button><button class="btn ghost small" data-season="1">🏆 تقرير الموسم</button></div>
   ${hasRace&&hasTest?`<div class="chips" style="margin-top:12px"><button class="chip" data-swk="test" aria-pressed="${kind==="test"}">القياسات</button><button class="chip" data-swk="race" aria-pressed="${kind==="race"}">البطولات</button></div>`:""}
   ${!evs.length?`<div class="panel empty" style="margin-top:12px">مفيش أوقات لسه. سجّل أول وقت.</div>${devCard(sw)}`:`
   <div class="chips">${evs.map(x=>`<button class="chip" data-ev="${x.key}" aria-pressed="${x.key===state.event}">${evName(x.key)}</button>`).join("")}</div>
@@ -2435,19 +2440,8 @@ function meetCardData(m,id){
     range:rs[0].date===rs[rs.length-1].date?dmy(rs[0].date):dmy(rs[0].date)+" → "+dmy(rs[rs.length-1].date),
     rows,file:`Meet-Results-${(sw.nameEn||"swimmer").trim().replace(/[^A-Za-z0-9]+/g,"-")}-${rs[0].date}`};
 }
-/* الرسم — شكل Clean Pro: هيدر أزرق ولوجو كارت الغياب وحبل الحارة.
-   الكارت الكبير اللي فوق (الميدالية) بيظهر بس لو السباح جاب مركز من 1 لـ 3 */
-async function meetCard(o){
-  const FD='"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif';
-  try{ await Promise.all(["800 40px","700 40px","600 40px","italic 800 40px"].map(f=>document.fonts.load(f+' "Barlow Semi Condensed"'))); }catch(e){}
-  const lg=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=CARD_LOGO;});
-  /* o.monthly: كارت الشهر — مفيش ميدالية، والدايرة فيها عدد مرات السباحة بدل المركز */
-  const isMeet=!o.monthly;
-  const rows=o.rows, hr=isMeet?rows.filter(r=>r.place&&r.place<=3).sort((a,b)=>a.place-b.place)[0]||null:null;
-  const W=1080, P=60, blkH=372, gap=22, heroH=290, band=400;
-  const H=(hr?band+heroH-90+46:band+46)+rows.length*(blkH+gap)-gap+150, SC=2;
-  const cv=document.createElement("canvas"); cv.width=W*SC; cv.height=H*SC;
-  const ctx=cv.getContext("2d"); ctx.scale(SC,SC); ctx.direction="ltr"; ctx.textBaseline="alphabetic"; ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+/* أدوات الرسم المشتركة بين كارت البطولة وكارت الشهر وتقرير الموسم */
+function cardKit(ctx,FD){
   const NAVY="#0B2B66", BLUE="#1F5FD0", OK="#16A36A", BAD="#E0414F", MUTED="#64748B", INK="#0B1B33";
   const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
   const fit=(t,max,size,weight)=>{ let s=size; ctx.font=`${weight} ${s}px ${FD}`; while(s>14&&ctx.measureText(t).width>max){s--;ctx.font=`${weight} ${s}px ${FD}`;} return s; };
@@ -2495,6 +2489,23 @@ async function meetCard(o){
     ctx.fillStyle=MUTED; ctx.font=`600 19px ${FD}`; ctx.textAlign="center";
     ctx.fillText(pts[0].d,X(0),B+36); if(n>1) ctx.fillText(pts[n-1].d,X(n-1),B+36); ctx.textAlign="left";
   };
+  return {rr,fit,spaced,badgeTxt,medal,rope,chart};
+}
+/* الرسم — شكل Clean Pro: هيدر أزرق ولوجو كارت الغياب وحبل الحارة.
+   الكارت الكبير اللي فوق (الميدالية) بيظهر بس لو السباح جاب مركز من 1 لـ 3 */
+async function meetCard(o){
+  const FD='"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif';
+  try{ await Promise.all(["800 40px","700 40px","600 40px","italic 800 40px"].map(f=>document.fonts.load(f+' "Barlow Semi Condensed"'))); }catch(e){}
+  const lg=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=CARD_LOGO;});
+  /* o.monthly: كارت الشهر — مفيش ميدالية، والدايرة فيها عدد مرات السباحة بدل المركز */
+  const isMeet=!o.monthly;
+  const rows=o.rows, hr=isMeet?rows.filter(r=>r.place&&r.place<=3).sort((a,b)=>a.place-b.place)[0]||null:null;
+  const W=1080, P=60, blkH=372, gap=22, heroH=290, band=400;
+  const H=(hr?band+heroH-90+46:band+46)+rows.length*(blkH+gap)-gap+150, SC=2;
+  const cv=document.createElement("canvas"); cv.width=W*SC; cv.height=H*SC;
+  const ctx=cv.getContext("2d"); ctx.scale(SC,SC); ctx.direction="ltr"; ctx.textBaseline="alphabetic"; ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+  const NAVY="#0B2B66", BLUE="#1F5FD0", OK="#16A36A", BAD="#E0414F", MUTED="#64748B", INK="#0B1B33";
+  const {rr,fit,spaced,badgeTxt,medal,rope,chart}=cardKit(ctx,FD);
   /* الخلفية واللوجو الباهت */
   ctx.fillStyle="#F3F6FB"; ctx.fillRect(0,0,W,H);
   if(lg){ const ww=W*.9, hh=ww*lg.height/lg.width; ctx.globalAlpha=.045; ctx.drawImage(lg,(W-ww)/2,H*.6-hh/2,ww,hh); ctx.globalAlpha=1; }
@@ -2640,45 +2651,184 @@ async function openMonthCard(id,ym){
 }
 const ymOf=back=>{ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-back); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); };
 
-/* ===== ستوب ووتش: توقيت بالأطوال، وبعدين الأرقام تروح لفورمة القياسات تراجعها وتحفظها ===== */
-const SW_={on:false,t0:0,laps:[],total:null,raf:0};
-function swCfg(){ const c=state.swc||(state.swc={sw:mSwId(),st:"free",dist:50,pool:25}); if(!state.swimmers.some(s=>s.id===c.sw)) c.sw=mSwId(); return c; }
+/* ===== تقرير الموسم لولي الأمر: أرقام البطولات بس في سنة واحدة — بيقرا بس ===== */
+function seasonCardData(id,year){
+  const sw=state.swimmers.find(s=>s.id===id); if(!sw) return null;
+  const rs=state.results.filter(r=>r.swimmer===id&&r.kind==="race"&&String(r.date||"").slice(0,4)===year).sort(byDate);
+  if(!rs.length) return {empty:true};
+  const meets=meetsList().filter(m=>m.rs.some(r=>r.swimmer===id&&String(r.date||"").slice(0,4)===year)).length;
+  const pbs=rs.filter(r=>{ const pb=prevBest(r); return pb!=null&&r.t<pb-0.005; }).length;
+  const medals={1:0,2:0,3:0}; rs.forEach(r=>{ if(r.rank>=1&&r.rank<=3) medals[r.rank]++; });
+  const g={}; rs.forEach(r=>{ (g[evKey(r)]=g[evKey(r)]||[]).push(r); });
+  const evs=Object.entries(g).sort((a,b)=>b[1].length-a[1].length||(+a[0].split("|")[0])-(+b[0].split("|")[0]));
+  const evLbl=k=>{ const [d,st]=k.split("|"); return `${d} m ${STROKE_EN[st]||st}`; };
+  const best=evs.slice(0,6).map(([k,list])=>{ const t=Math.min(...list.map(r=>r.t)), places=list.map(r=>r.rank).filter(Boolean);
+    return {ev:evLbl(k),t,gain:list.length>1?Math.max(0,list[0].t-t):0,place:places.length?Math.min(...places):null,n:list.length}; });
+  /* رسم لأهم سباقين اتسبحوا أكتر من مرة */
+  const prog=evs.filter(([,l])=>l.length>1).slice(0,2).map(([k,list])=>{ const h=list.slice(-8), last=h[h.length-1], before=Math.min(...h.slice(0,-1).map(r=>r.t));
+    return {ev:evLbl(k),st:last.t<=before?"pb":"slow",hist:h.map(r=>({d:dmy(r.date).slice(0,5),t:r.t}))}; });
+  const age=ageOf(sw);
+  return {name:(sw.nameEn||"").trim(),label:(sw.sex==="f"?"GIRLS":"BOYS")+(age?" · "+(AGE_EN[age]||age):""),season:year+" SEASON",
+    meets,pbs,medals,best,prog,file:`Season-Report-${(sw.nameEn||"swimmer").trim().replace(/[^A-Za-z0-9]+/g,"-")}-${year}`};
+}
+async function seasonCard(o){
+  const FD='"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif';
+  try{ await Promise.all(["800 40px","700 40px","600 40px","italic 800 40px"].map(f=>document.fonts.load(f+' "Barlow Semi Condensed"'))); }catch(e){}
+  const lg=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=CARD_LOGO;});
+  const W=1080, P=60, band=400, tileH=210, rowH=118, gap=16, chH=330;
+  const H=band-60+tileH+70+56+o.best.length*(rowH+gap)+(o.prog.length?56+o.prog.length*(chH+gap):0)+150, SC=2;
+  const cv=document.createElement("canvas"); cv.width=W*SC; cv.height=H*SC;
+  const ctx=cv.getContext("2d"); ctx.scale(SC,SC); ctx.direction="ltr"; ctx.textBaseline="alphabetic"; ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+  const NAVY="#0B2B66", BLUE="#1F5FD0", OK="#16A36A", MUTED="#64748B", INK="#0B1B33";
+  const {rr,fit,spaced,medal,rope,chart}=cardKit(ctx,FD);
+  ctx.fillStyle="#F3F6FB"; ctx.fillRect(0,0,W,H);
+  if(lg){ const ww=W*.9, hh=ww*lg.height/lg.width; ctx.globalAlpha=.045; ctx.drawImage(lg,(W-ww)/2,H*.55-hh/2,ww,hh); ctx.globalAlpha=1; }
+  /* الهيدر */
+  const bg=ctx.createLinearGradient(0,0,W,band); bg.addColorStop(0,"#0A2A6B"); bg.addColorStop(.6,"#1446A8"); bg.addColorStop(1,"#1F6FE0"); ctx.fillStyle=bg; ctx.fillRect(0,0,W,band);
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,band); ctx.clip(); ctx.strokeStyle="rgba(255,255,255,.07)"; ctx.lineWidth=34;
+  for(let x=-band;x<W+band;x+=90){ ctx.beginPath(); ctx.moveTo(x,band); ctx.lineTo(x+band,0); ctx.stroke(); } ctx.restore();
+  if(lg){ const lw=200, lh=lw*lg.height/lg.width, bx=W-P-lw-30, by=P-14; ctx.save(); ctx.shadowColor="rgba(0,0,0,.25)"; ctx.shadowBlur=24; rr(bx,by,lw+60,lh+28,22); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore(); ctx.drawImage(lg,bx+30,by+14,lw,lh); }
+  ctx.fillStyle="#9CC2FF"; ctx.font=`700 26px ${FD}`; spaced("SEASON REPORT",P,P+28,6);
+  const name=o.name.toUpperCase();
+  ctx.fillStyle="#fff"; const ns=fit(name,W-2*P-300,104,"800"); ctx.fillText(name,P,P+56+ns*.9);
+  ctx.fillStyle="#CFE0FF"; ctx.font=`600 30px ${FD}`; spaced(o.label+"   |   "+o.season,P,P+56+ns*.9+50,1.5);
+  rope(0,band-6,W+30);
+  /* المربعات — مربع الميداليات بيظهر بس لو فيه ميداليات */
+  let y=band-60; const totM=o.medals[1]+o.medals[2]+o.medals[3], nT=totM?3:2, tw=(W-2*P-(nT-1)*20)/nT;
+  const tile=(i,lab,draw)=>{ const x=P+i*(tw+20); ctx.save(); ctx.shadowColor="rgba(11,43,102,.18)"; ctx.shadowBlur=30; ctx.shadowOffsetY=10; rr(x,y,tw,tileH,26); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore();
+    ctx.fillStyle=MUTED; ctx.font=`700 22px ${FD}`; spaced(lab,x+tw/2,y+48,3,"center"); draw(x); };
+  const big=(x,v,c)=>{ ctx.fillStyle=c; ctx.font=`italic 800 96px ${FD}`; ctx.textAlign="center"; ctx.fillText(v,x+tw/2,y+160); ctx.textAlign="left"; };
+  tile(0,"MEETS",x=>big(x,o.meets,NAVY));
+  tile(1,"NEW PBs",x=>big(x,o.pbs,OK));
+  if(totM) tile(2,"MEDALS",x=>{ [1,2,3].forEach((p,j)=>{ const cx=x+tw/2+(j-1)*92; medal(cx,y+132,30,p); ctx.fillStyle=INK; ctx.font=`800 30px ${FD}`; ctx.textAlign="center"; ctx.fillText("×"+o.medals[p],cx,y+194); ctx.textAlign="left"; }); });
+  y+=tileH+70;
+  /* أحسن الأوقات */
+  ctx.fillStyle=BLUE; ctx.font=`700 26px ${FD}`; spaced("BEST TIMES THIS SEASON",P,y,4); y+=30;
+  o.best.forEach((r,i)=>{ const yy=y+i*(rowH+gap), x=P, w=W-2*P;
+    ctx.save(); ctx.shadowColor="rgba(11,43,102,.10)"; ctx.shadowBlur=22; ctx.shadowOffsetY=6; rr(x,yy,w,rowH,22); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore();
+    ctx.fillStyle=INK; ctx.font=`700 38px ${FD}`; ctx.fillText(r.ev.toUpperCase(),x+34,yy+54);
+    ctx.fillStyle=MUTED; ctx.font=`600 22px ${FD}`; ctx.fillText(`${r.n} ${r.n===1?"SWIM":"SWIMS"}`+(r.place?`  ·  BEST PLACE ${r.place}`:""),x+34,yy+90);
+    ctx.fillStyle=NAVY; ctx.font=`italic 800 64px ${FD}`; ctx.textAlign="right"; ctx.fillText(fmt(r.t),x+w-230,yy+80); ctx.textAlign="left";
+    const good=r.gain>0.005, bt=good?"−"+r.gain.toFixed(2)+" s":"—", bw=170;
+    ctx.font=`800 24px ${FD}`; rr(x+w-200,yy+36,bw,46,23); ctx.fillStyle=good?OK:"#E2E8F0"; ctx.fill();
+    ctx.fillStyle=good?"#fff":MUTED; ctx.textAlign="center"; ctx.fillText(bt,x+w-200+bw/2,yy+68); ctx.textAlign="left"; });
+  y+=o.best.length*(rowH+gap);
+  /* الرسم لأهم سباقين */
+  if(o.prog.length){ y+=26; ctx.fillStyle=BLUE; ctx.font=`700 26px ${FD}`; spaced("PROGRESS",P,y,4); y+=30;
+    o.prog.forEach((r,i)=>{ const yy=y+i*(chH+gap), x=P, w=W-2*P;
+      ctx.save(); ctx.shadowColor="rgba(11,43,102,.10)"; ctx.shadowBlur=22; ctx.shadowOffsetY=6; rr(x,yy,w,chH,22); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore();
+      ctx.fillStyle=INK; ctx.font=`700 32px ${FD}`; ctx.fillText(r.ev.toUpperCase(),x+30,yy+48);
+      rr(x+24,yy+66,w-48,chH-88,18); ctx.fillStyle="#F5F8FD"; ctx.fill();
+      chart(r,x+24,yy+66,w-48,chH-88); }); }
+  const fy=H-80; ctx.fillStyle="#D5DEEA"; ctx.fillRect(P,fy,W-2*P,2);
+  ctx.fillStyle="#7C8BA3"; ctx.font=`700 22px ${FD}`; spaced("SWIM  ·  RACE  ·  IMPROVE",W/2,fy+46,5,"center");
+  return await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("png")),"image/png"));
+}
+async function openSeasonCard(id){
+  const last=state.results.filter(r=>r.swimmer===id&&r.kind==="race"&&r.date).sort(byDate).pop();
+  if(!last){ toast("مفيش نتايج بطولات للسباح ده"); return; }
+  const o=seasonCardData(id,last.date.slice(0,4));
+  if(!o||o.empty){ toast("مفيش نتايج بطولات في الموسم ده"); return; }
+  if(!o.name){ toast("ضيف الاسم بالإنجليزي من \"تعديل\" في صفحة السباح"); return; }
+  showCards([{o,png:await seasonCard(o)}],[]);
+}
+
+/* ===== ستوب ووتش: سباح واحد (الأرقام تروح لفورمة القياسات تراجعها) أو 2-4 سباحين مع بعض (بيتحفظوا مرة واحدة بعد المراجعة) ===== */
+const SW_={on:false,t0:0,laps:[],total:null,raf:0,lanes:[]};
+function swCfg(){
+  const c=state.swc||(state.swc={sw:mSwId(),st:"free",dist:50,pool:25,multi:false,ids:[]});
+  if(!state.swimmers.some(s=>s.id===c.sw)) c.sw=mSwId();
+  c.ids=(c.ids||[]).filter(id=>state.swimmers.some(s=>s.id===id));
+  return c;
+}
 function swLapsN(){ const c=swCfg(); return mLaps(c.dist,c.pool); }
-function swNow(){ return SW_.on?(performance.now()-SW_.t0)/1000:(SW_.total||0); }
+function swEl(){ return (performance.now()-SW_.t0)/1000; }
+function swNow(){ const c=swCfg(); if(SW_.on) return swEl(); return c.multi?Math.max(0,...SW_.lanes.map(l=>l.total||0)):(SW_.total||0); }
+function swIdle(){ const c=swCfg(); return !SW_.on&&(c.multi?!SW_.lanes.length:SW_.total==null); }
+const swName=id=>state.swimmers.find(s=>s.id===id)?.name||"";
 function swDraw(){
   const ov=document.getElementById("swov"); if(!ov) return;
-  const c=swCfg(), n=swLapsN(), done=!SW_.on&&SW_.total!=null, idle=!SW_.on&&SW_.total==null;
-  const opt=(arr,v,f)=>arr.map(x=>`<option value="${x[0]}" ${String(x[0])===String(v)?"selected":""}>${esc(x[1])}</option>`).join("");
-  ov.innerHTML=`<div class="swbox">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">⏱ ستوب ووتش</h2><button class="btn ghost small" data-swa="close">قفل</button></div>
-    <div class="row" style="gap:8px;margin-top:10px">
-      <div class="field" style="margin:0;min-width:140px"><label for="swS">السباح</label><select id="swS" class="swc" ${idle?"":"disabled"}>${opt(state.swimmers.map(s=>[s.id,s.name]),c.sw)}</select></div>
-      <div class="field" style="margin:0;max-width:100px"><label for="swSt">النوع</label><select id="swSt" class="swc" ${idle?"":"disabled"}>${opt(Object.entries(STROKES),c.st)}</select></div>
-      <div class="field" style="margin:0;max-width:86px"><label for="swD">المسافة</label><select id="swD" class="swc" ${idle?"":"disabled"}>${opt(MDISTS.map(x=>[x,x]),c.dist)}</select></div>
-      <div class="field" style="margin:0;max-width:86px"><label for="swP">المسبح</label><select id="swP" class="swc" ${idle?"":"disabled"}>${opt(MPOOLS.map(x=>[x,x]),c.pool)}</select></div>
-    </div>
-    <div class="swtime" id="swTime">${fmt(swNow())}</div>
+  const c=swCfg(), n=swLapsN(), idle=swIdle(), dis=idle?"":"disabled";
+  const opt=(arr,v)=>arr.map(x=>`<option value="${x[0]}" ${String(x[0])===String(v)?"selected":""}>${esc(x[1])}</option>`).join("");
+  let body="";
+  if(!c.multi){
+    const done=!SW_.on&&SW_.total!=null;
+    body=`<div class="swtime" id="swTime">${fmt(swNow())}</div>
     <p class="note" style="text-align:center;margin:0 0 10px">${n?`طول ${Math.min(SW_.laps.length+(SW_.on?1:0),n)||0} من ${n}`:"المسافة دي مش بتتقسم أطوال — دوس وقّف في الآخر"}</p>
     ${SW_.on?`${n?`<button class="btn swbig" data-swa="lap">طول ✓</button>`:""}<button class="btn ghost swbig" data-swa="stop" style="margin-top:12px">وقّف</button>`
       :idle?`<button class="btn swbig" data-swa="start">ابدأ</button>`
       :`<button class="btn swbig" data-swa="save">احفظ في القياسات</button><button class="btn ghost" data-swa="reset" style="margin-top:12px;width:100%">من الأول</button>`}
     ${SW_.laps.length?`<div class="panel" style="margin-top:14px">${SW_.laps.map((t,i)=>`<div class="rank" style="grid-template-columns:1fr auto"><span>طول ${i+1}</span><span class="t">${t.toFixed(2)}</span></div>`).join("")}</div>`:""}
-    ${done&&n&&SW_.laps.length!==n?`<p class="note">وقفت قبل آخر طول، فالأطوال مش هتتحفظ — الزمن الكلي بس.</p>`:""}
-  </div>`;
+    ${done&&n&&SW_.laps.length!==n?`<p class="note">وقفت قبل آخر طول، فالأطوال مش هتتحفظ — الزمن الكلي بس.</p>`:""}`;
+  } else if(idle){
+    body=`<p class="hint" style="margin-top:12px">اختار من 2 لـ 4 سباحين (${c.ids.length} مختارين)</p>
+    <div class="chips">${state.swimmers.map(s=>`<button class="chip" data-swpick="${s.id}" aria-pressed="${c.ids.includes(s.id)}">${esc(s.name)}</button>`).join("")}</div>
+    <div class="swtime" id="swTime">${fmt(0)}</div>
+    <button class="btn swbig" data-swa="mstart" ${c.ids.length<2?"disabled":""}>ابدأ الكل</button>`;
+  } else {
+    const allDone=!SW_.on;
+    body=`<div class="swtime" id="swTime">${fmt(swNow())}</div>
+    <div class="swlanes">${SW_.lanes.map((l,i)=>{ const fin=l.total!=null, k=Math.min(l.laps.length+(fin?0:1),n);
+      return `<div class="swlane${fin?" fin":""}"><b><bdi>${esc(swName(l.id))}</bdi></b>
+        <p class="lmeta" style="margin:2px 0 8px">${fin?`✔ خلص${l.part?" (وقف قبل الآخر)":""}`:n?`طول ${k} من ${n}`:"شغال"}</p>
+        <div class="swlt">${fin?fmt(l.total):l.laps.length?l.laps[l.laps.length-1].toFixed(2):"—"}</div>
+        ${!fin&&SW_.on?`<button class="btn swbig" data-swl="${i}">${n?"طول ✓":"وصل ✓"}</button>`:""}</div>`; }).join("")}</div>
+    ${SW_.on?`<button class="btn ghost" data-swa="mstop" style="margin-top:14px;width:100%">وقّف الكل</button>`
+      :`<div class="panel" style="margin-top:14px">${SW_.lanes.map(l=>`<div class="rank" style="grid-template-columns:1fr auto"><span><bdi>${esc(swName(l.id))}</bdi>${n&&l.laps.length===n?`<br><span class="lmeta" style="direction:ltr;display:inline-block">${l.laps.map(x=>x.toFixed(2)).join(" / ")}</span>`:""}</span><span class="t">${fmt(l.total)}</span></div>`).join("")}</div>
+      <button class="btn swbig" data-swa="msave" style="margin-top:12px">احفظ للكل في القياسات</button>
+      <button class="btn ghost" data-swa="mreset" style="margin-top:12px;width:100%">من الأول</button>`}`;
+  }
+  ov.innerHTML=`<div class="swbox">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">⏱ ستوب ووتش</h2><button class="btn ghost small" data-swa="close">قفل</button></div>
+    <div class="chips" style="margin:10px 0 0"><button class="chip" data-swm="0" aria-pressed="${!c.multi}" ${dis}>سباح واحد</button><button class="chip" data-swm="1" aria-pressed="${!!c.multi}" ${dis}>كذا سباح</button></div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      ${c.multi?"":`<div class="field" style="margin:0;min-width:140px"><label for="swS">السباح</label><select id="swS" class="swc" ${dis}>${opt(state.swimmers.map(s=>[s.id,s.name]),c.sw)}</select></div>`}
+      <div class="field" style="margin:0;max-width:100px"><label for="swSt">النوع</label><select id="swSt" class="swc" ${dis}>${opt(Object.entries(STROKES),c.st)}</select></div>
+      <div class="field" style="margin:0;max-width:86px"><label for="swD">المسافة</label><select id="swD" class="swc" ${dis}>${opt(MDISTS.map(x=>[x,x]),c.dist)}</select></div>
+      <div class="field" style="margin:0;max-width:86px"><label for="swP">المسبح</label><select id="swP" class="swc" ${dis}>${opt(MPOOLS.map(x=>[x,x]),c.pool)}</select></div>
+    </div>${body}</div>`;
 }
 function swTick(){ const el=document.getElementById("swTime"); if(el) el.textContent=fmt(swNow()); if(SW_.on) SW_.raf=requestAnimationFrame(swTick); }
 function openStopwatch(){ if(!state.swimmers.length){ toast("ضيف سباح الأول"); return; }
   document.getElementById("swov")?.remove(); const ov=document.createElement("div"); ov.id="swov"; ov.className="swov"; document.body.appendChild(ov); keepAwake(); swDraw(); }
 function closeStopwatch(){ if(SW_.on) return; cancelAnimationFrame(SW_.raf); document.getElementById("swov")?.remove(); if(state.view!=="pool") releaseAwake(); }
+function swStopRun(){ SW_.on=false; cancelAnimationFrame(SW_.raf); }
+/* طول لسباح واحد في وضع "كذا سباح" */
+function swLane(i){
+  const l=SW_.lanes[i]; if(!SW_.on||!l||l.total!=null) return;
+  const n=swLapsN(), el=swEl();
+  if(n){ const sum=l.laps.reduce((a,b)=>a+b,0); l.laps.push(+(el-sum).toFixed(2)); if(l.laps.length>=n) l.total=+el.toFixed(2); }
+  else l.total=+el.toFixed(2);
+  if(SW_.lanes.every(x=>x.total!=null)) swStopRun();
+  swDraw(); if(SW_.on) swTick();
+}
+async function swSaveAll(){
+  const c=swCfg(), n=swLapsN(), bad=[]; let saved=0;
+  try{
+    for(const l of [...SW_.lanes]){
+      const tb=timeBad(l.total,c.dist); if(tb){ bad.push(swName(l.id)); continue; }
+      await store.saveMeas({swimmer:l.id,date:today(),stroke:c.st,dist:c.dist,pool:c.pool,tot:l.total,strokes:null,
+        laps:n&&l.laps.length===n?l.laps.slice():[],also:false});
+      saved++; SW_.lanes=SW_.lanes.filter(x=>x!==l);   // اتحفظ: يتشال عشان المحاولة الجاية ماتكررهوش
+    }
+    SW_.lanes=[]; swDraw();
+    toast(`اتحفظ ${saved} قياس`+(bad.length?` — اتساب ${bad.join("، ")} لأن الوقت مش منطقي`:""));
+  }catch(e){ swDraw(); toast(saved?`اتحفظ ${saved} بس، دوس احفظ تاني للباقي`:"ماتحفظش، جرّب تاني"); }
+}
 function swAct(a){
-  const n=swLapsN();
+  const c=swCfg(), n=swLapsN();
   if(a==="start"){ SW_.on=true; SW_.t0=performance.now(); SW_.laps=[]; SW_.total=null; swDraw(); swTick(); return; }
-  if(a==="lap"&&SW_.on){ const el=swNow(), sum=SW_.laps.reduce((x,y)=>x+y,0); SW_.laps.push(+(el-sum).toFixed(2));
-    if(n&&SW_.laps.length>=n){ SW_.on=false; SW_.total=+el.toFixed(2); cancelAnimationFrame(SW_.raf); } swDraw(); if(SW_.on) swTick(); return; }
-  if(a==="stop"&&SW_.on){ SW_.on=false; SW_.total=+swNow().toFixed(2); cancelAnimationFrame(SW_.raf); swDraw(); return; }
+  if(a==="lap"&&SW_.on&&!c.multi){ const el=swEl(), sum=SW_.laps.reduce((x,y)=>x+y,0); SW_.laps.push(+(el-sum).toFixed(2));
+    if(n&&SW_.laps.length>=n){ SW_.total=+el.toFixed(2); swStopRun(); } swDraw(); if(SW_.on) swTick(); return; }
+  if(a==="stop"&&SW_.on&&!c.multi){ SW_.total=+swEl().toFixed(2); swStopRun(); swDraw(); return; }
   if(a==="reset"){ SW_.on=false; SW_.laps=[]; SW_.total=null; swDraw(); return; }
+  if(a==="mstart"){ if(c.ids.length<2){ toast("اختار سباحين على الأقل"); return; }
+    SW_.lanes=c.ids.map(id=>({id,laps:[],total:null})); SW_.on=true; SW_.t0=performance.now(); swDraw(); swTick(); return; }
+  if(a==="mstop"&&SW_.on){ const el=+swEl().toFixed(2); SW_.lanes.forEach(l=>{ if(l.total==null){ l.total=el; l.part=true; } }); swStopRun(); swDraw(); return; }
+  if(a==="mreset"){ SW_.on=false; SW_.lanes=[]; swDraw(); return; }
+  if(a==="msave"){ once("swsave",swSaveAll); return; }
   if(a==="close"){ if(SW_.on){ toast("وقّف التوقيت الأول"); return; } closeStopwatch(); return; }
-  if(a==="save"&&SW_.total!=null){ const c=swCfg();
+  if(a==="save"&&SW_.total!=null){
     const d={mDate:today(),mSt:c.st,mD:String(c.dist),mP:String(c.pool),mT:fmt(SW_.total),mN:"",mAlso:false};
     if(n&&SW_.laps.length===n) SW_.laps.forEach((t,i)=>{ d["mL"+i]=t.toFixed(2); });
     state.mSw=c.sw; state.medit=null; state.mdraft=d; SW_.laps=[]; SW_.total=null;
@@ -3362,9 +3512,15 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.mcm!==undefined&&state.sel){ const old=t.textContent; t.disabled=true; t.textContent="بيجهز…";
     try{ await once("mcm",()=>openMonthCard(state.sel,ymOf(+t.dataset.mcm))); }catch(e){ toast("معرفتش أجهز الكارت، جرّب تاني"); }
     t.disabled=false; t.textContent=old; return; }
+  if(t.dataset.season&&state.sel){ const old=t.textContent; t.disabled=true; t.textContent="بيجهز…";
+    try{ await once("season",()=>openSeasonCard(state.sel)); }catch(e){ toast("معرفتش أجهز التقرير، جرّب تاني"); }
+    t.disabled=false; t.textContent=old; return; }
   /* ستوب ووتش ومقارنة */
   if(t.dataset.swopen){ openStopwatch(); return; }
-  if(t.dataset.swa){ if(!["start","lap","stop"].includes(t.dataset.swa)) swAct(t.dataset.swa); return; }
+  if(t.dataset.swa){ if(!["start","lap","stop","mstart","mstop"].includes(t.dataset.swa)) swAct(t.dataset.swa); return; }
+  if(t.dataset.swl!==undefined) return;
+  if(t.dataset.swm!==undefined){ if(!swIdle()) return; const c=swCfg(); c.multi=t.dataset.swm==="1"; SW_.laps=[]; SW_.total=null; SW_.lanes=[]; swDraw(); return; }
+  if(t.dataset.swpick){ const c=swCfg(), id=t.dataset.swpick; if(c.ids.includes(id)) c.ids=c.ids.filter(x=>x!==id); else if(c.ids.length>=4){ toast("أقصى حاجة 4 سباحين"); return; } else c.ids.push(id); swDraw(); return; }
   if(t.dataset.cpk){ state.cpf.kind=t.dataset.cpk; render(); return; }
   if(t.dataset.swk){ state.swKind=t.dataset.swk; state.event=null; state.histAll=false; render(); return; }
   if(t.id==="mrOpen"){ state.meetRen=state.meetKey; render(); return; }
@@ -3675,7 +3831,8 @@ document.addEventListener("click",e=>{
 })();
 /* الستوب ووتش بيشتغل أول ما الصباع يلمس الزرار (أدق من click) */
 document.addEventListener("pointerdown",e=>{ const b=e.target.closest&&e.target.closest("[data-swa]");
-  if(b&&["start","lap","stop"].includes(b.dataset.swa)){ e.preventDefault(); swAct(b.dataset.swa); } });
+  if(b&&["start","lap","stop","mstart","mstop"].includes(b.dataset.swa)){ e.preventDefault(); swAct(b.dataset.swa); return; }
+  const ln=e.target.closest&&e.target.closest("[data-swl]"); if(ln){ e.preventDefault(); swLane(+ln.dataset.swl); } });
 /* "فيه نسخة جديدة": نسأل الـ service worker بعد الفتح وكل ما التطبيق يرجع قدامك */
 addEventListener("load",()=>{ setTimeout(checkUpdate,4000); setTimeout(checkUpdate,15000); });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") setTimeout(checkUpdate,3000); });
