@@ -1280,7 +1280,11 @@ function seasonCard(sw){
 }
 function swimmerView(){
   const sw=state.swimmers.find(s=>s.id===state.sel); if(!sw){state.view="home";return home();}
-  const {rs,evs,issues}=analyze(sw);
+  const {issues}=analyze(sw);
+  /* البطولات والقياسات منفصلين: الرسم والسجل بيعرضوا نوع واحد بس */
+  const all=state.results.filter(r=>r.swimmer===sw.id), hasRace=all.some(r=>r.kind==="race"), hasTest=all.some(r=>r.kind!=="race");
+  const kind=(state.swKind==="race"&&hasRace)||(state.swKind==="test"&&hasTest)?state.swKind:(hasTest?"test":"race");
+  const rs=all.filter(r=>kind==="race"?r.kind==="race":r.kind!=="race"), evs=eventsOf(rs);
   if(!evs.find(e=>e.key===state.event)) state.event=evs[0]?.key;
   const e=evs.find(x=>x.key===state.event);
   const ai=state.ai[sw.id+"|"+state.event];
@@ -1306,6 +1310,7 @@ function swimmerView(){
     <div class="row"><button class="btn" id="edSave">احفظ التعديل</button><button class="btn ghost" id="edCancel">إلغاء</button>
       <button class="x" id="edDel" style="margin-inline-start:auto;color:var(--bad)">امسح السباح</button></div>
   </div>`:""}
+  ${hasRace&&hasTest?`<div class="chips" style="margin-top:12px"><button class="chip" data-swk="test" aria-pressed="${kind==="test"}">القياسات</button><button class="chip" data-swk="race" aria-pressed="${kind==="race"}">البطولات</button></div>`:""}
   ${!evs.length?`<div class="panel empty" style="margin-top:12px">مفيش أوقات لسه. سجّل أول وقت.</div>${devCard(sw)}`:`
   <div class="chips">${evs.map(x=>`<button class="chip" data-ev="${x.key}" aria-pressed="${x.key===state.event}">${evName(x.key)}</button>`).join("")}</div>
   <div class="panel">
@@ -1341,7 +1346,7 @@ function swimmerView(){
       <p class="note" style="margin:6px 0 0">${sw.entries&&sw.entries.length?"محددة يدويًا":"متحددة تلقائيًا من أهدافه وسباقاته — تقدر تغيّرها من تعديل"}</p></div>`:"";})()}
   ${seasonCard(sw)}
   ${deepCard(sw,state.event)}
-  <h2>السجل</h2>
+  <h2>السجل <span class="lmeta">— ${kind==="race"?"البطولات":"القياسات"}</span></h2>
   <div class="panel"><ul class="hist">${[...rs].sort(byDate).reverse().slice(0,state.histAll?999:6).map(r=>`<li>
     <span>${r.date} · ${r.dist}م ${STROKES[r.stroke]}${r.kind==="race"?" · بطولة"+(r.rank?` (مركز ${r.rank})`:""):""}${(r.pool||20)!=20?` · حمام ${r.pool}`:""}${r.sc?` · ${r.sc} ضربة`:""}${r.note?` · ${esc(r.note)}`:""}${(r.laps||[]).length?`<br><span style="direction:ltr;display:inline-block;font-variant-numeric:tabular-nums">${r.laps.map(x=>x.toFixed(2)).join(" / ")}</span>`:""}</span>
     <span class="row" style="gap:6px"><span style="font-size:13px">${diffHtml(r.t,prevOf(r,rs)?.t)}</span><span class="t">${fmt(r.t)}</span><button class="x" data-del="${r.id}" aria-label="امسح">✕</button></span></li>`).join("")}</ul>
@@ -2315,8 +2320,9 @@ function meetsList(){
   });
   return out.sort((a,b)=>b.to.localeCompare(a.to));
 }
+/* أحسن رقم في البطولات اللي قبل كده (القياسات مش بتتحسب — كل حاجة لوحدها) */
 function prevBest(r){
-  const earlier=state.results.filter(o=>o.swimmer===r.swimmer&&o.stroke===r.stroke&&o.dist==r.dist&&(o.pool||20)==(r.pool||20)&&o.id!==r.id&&byDate(o,r)<0);
+  const earlier=state.results.filter(o=>o.swimmer===r.swimmer&&o.kind==="race"&&o.stroke===r.stroke&&o.dist==r.dist&&(o.pool||20)==(r.pool||20)&&o.id!==r.id&&byDate(o,r)<0);
   return earlier.length?Math.min(...earlier.map(o=>o.t)):null;
 }
 function resultsView(){
@@ -2331,7 +2337,10 @@ function resultsView(){
   }
   const m=meets.find(x=>x.k===state.meetKey), by=state.meetBy||"sum";
   const head=`<button class="more" data-meet="">→ كل البطولات</button>
-    <h2 style="margin:8px 0 4px">${esc(m.name)}</h2>
+    ${state.meetRen===m.k?`<div class="panel" style="margin:8px 0 10px"><div class="field" style="margin-bottom:10px"><label for="mrName">اسم البطولة</label><input id="mrName" value="${esc(m.name==="بدون اسم"?"":m.name)}" placeholder="بطولة الاتحاد"></div>
+      <div class="row"><button class="btn" id="mrSave">احفظ الاسم</button><button class="btn ghost" id="mrCancel">إلغاء</button></div>
+      <p class="note" style="margin:8px 0 0">بيغيّر اسم البطولة دي بس في ${m.rs.length} نتيجة. الأوقات والمراكز مش بتتغير.</p></div>`
+    :`<div class="row" style="justify-content:space-between;margin:8px 0 4px"><h2 style="margin:0">${esc(m.name)}</h2><button class="btn ghost small" id="mrOpen">✎ تعديل الاسم</button></div>`}
     <p class="note" style="margin:0 0 10px">${m.from===m.to?m.from:m.from+" ← "+m.to} · ${m.rs.length} سباق · ${m.sw} سباحين</p>
     <div class="chips"><button class="chip" data-by="sum" aria-pressed="${by==="sum"}">ملخص</button>
       <button class="chip" data-by="event" aria-pressed="${by==="event"}">بالسباق</button>
@@ -2395,7 +2404,7 @@ function meetCardData(m,id){
     const pb=prevBest(r), d=pb==null?null:r.t-pb;
     const st=pb==null?"first":d<-0.005?"pb":d>0.005?"slow":"same";
     /* آخر 8 أوقات في نفس السباق ونفس الحمام لحد البطولة دي */
-    const hist=state.results.filter(o=>o.swimmer===id&&o.stroke===r.stroke&&o.dist==r.dist&&(o.pool||20)==(r.pool||20)&&(o.id===r.id||byDate(o,r)<0))
+    const hist=state.results.filter(o=>o.swimmer===id&&o.kind==="race"&&o.stroke===r.stroke&&o.dist==r.dist&&(o.pool||20)==(r.pool||20)&&(o.id===r.id||byDate(o,r)<0))
       .sort(byDate).slice(-8).map(o=>({d:dmy(o.date).slice(0,5),t:o.t}));
     return {ev:`${r.dist} m ${STROKE_EN[r.stroke]||r.stroke}`,t:r.t,place:r.rank||null,st,d:d==null?0:Math.abs(d),hist};
   });
@@ -3149,6 +3158,18 @@ document.addEventListener("click",async ev=>{
     const old=t.textContent; t.disabled=true; t.textContent="بيجهز…";
     try{ await once("mcard",()=>openMeetCards(m,ids)); }catch(e){ toast("معرفتش أجهز الكارت، جرّب تاني"); }
     t.disabled=false; t.textContent=old; return; }
+  if(t.dataset.swk){ state.swKind=t.dataset.swk; state.event=null; state.histAll=false; render(); return; }
+  if(t.id==="mrOpen"){ state.meetRen=state.meetKey; render(); return; }
+  if(t.id==="mrCancel"){ state.meetRen=null; render(); return; }
+  if(t.id==="mrSave"){
+    const m=meetsList().find(x=>x.k===state.meetKey); if(!m) return;
+    const nn=($("#mrName")?.value||"").trim(); if(!nn){ toast("اكتب اسم البطولة"); return; }
+    if(nn===m.name){ state.meetRen=null; render(); return; }
+    await once("mrSave",async()=>{ t.disabled=true; let n=0;
+      try{ for(const r of m.rs){ const {id,...rest}=r; await store.put("results",id,{...rest,note:nn}); n++; }
+        state.meetRen=null; state.meetKey=null; state.meetSeek={name:nn,date:m.from}; toast("اتغير اسم البطولة"); render(); }
+      catch(e){ toast(n?`اتغير في ${n} من ${m.rs.length} بس، دوس احفظ تاني`:"ماتغيرش، جرّب تاني"); t.disabled=false; } });
+    return; }
   if(t.dataset.mcsend){ sendMeetCard(t.dataset.mcsend,t.dataset.i==null?null:+t.dataset.i,t); return; }
   if(t.id==="cardImg"){
     const ms=sheetModels(); if(!ms.length){ toast("مفيش تمرينة في اليوم ده"); return; }
