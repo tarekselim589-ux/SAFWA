@@ -2467,7 +2467,7 @@ function meetCardData(m,id){
     /* آخر 8 أوقات في نفس السباق ونفس الحمام لحد البطولة دي */
     const hist=state.results.filter(o=>o.swimmer===id&&o.kind==="race"&&o.stroke===r.stroke&&o.dist==r.dist&&(o.pool||20)==(r.pool||20)&&(o.id===r.id||byDate(o,r)<0))
       .sort(byDate).slice(-8).map(o=>({d:dmy(o.date).slice(0,5),t:o.t}));
-    return {ev:`${r.dist} m ${STROKE_EN[r.stroke]||r.stroke}`,t:r.t,place:r.rank||null,st,d:d==null?0:Math.abs(d),hist,qual:qualHit(sw,evKey(r),r.t)};
+    return {ev:`${r.dist} m ${STROKE_EN[r.stroke]||r.stroke}`,t:r.t,place:r.rank||null,st,d:d==null?0:Math.abs(d),hist,qual:qualHit(sw,evKey(r),r.t),q:(sw.quals&&sw.quals[evKey(r)])||null};
   });
   const age=ageOf(sw);
   return {name:(sw.nameEn||"").trim(),label:(sw.sex==="f"?"GIRLS":"BOYS")+(age?" · "+(AGE_EN[age]||age):""),
@@ -2535,7 +2535,9 @@ async function meetCard(o){
   const isMeet=!o.monthly;
   const rows=o.rows, hr=isMeet?rows.filter(r=>r.place&&r.place<=3).sort((a,b)=>a.place-b.place)[0]||null:null;
   const W=1080, P=60, blkH=372, gap=22, heroH=290, band=400;
-  const H=(hr?band+heroH-90+46:band+46)+rows.length*(blkH+gap)-gap+150, SC=2;
+  /* السباقات اللي ليها أزمنة تأهيل أطول: فيها شريط RQT · NCT · NQT بين النتيجة والرسم */
+  const QH=104, bh=r=>blkH+(r.q?QH:0);
+  const H=(hr?band+heroH-90+46:band+46)+rows.reduce((a,r)=>a+bh(r)+gap,0)-gap+150, SC=2;
   const cv=document.createElement("canvas"); cv.width=W*SC; cv.height=H*SC;
   const ctx=cv.getContext("2d"); ctx.scale(SC,SC); ctx.direction="ltr"; ctx.textBaseline="alphabetic"; ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
   const NAVY="#0B2B66", BLUE="#1F5FD0", OK="#16A36A", BAD="#E0414F", MUTED="#64748B", INK="#0B1B33";
@@ -2565,10 +2567,11 @@ async function meetCard(o){
     if(hr.st==="pb"){ ctx.font=`800 28px ${FD}`; const bt=badgeTxt(hr), bw=ctx.measureText(bt).width+40; rr(W-P-bw-30,y+196,bw,50,25); ctx.fillStyle=OK; ctx.fill(); ctx.fillStyle="#fff"; ctx.fillText(bt,W-P-bw-10,y+231); }
     y+=heroH+46; }
   /* السباقات */
+  let yAcc=y;
   rows.forEach((r,i)=>{
-    const x=P, w=W-2*P, yy=y+i*(blkH+gap), c=r.st==="pb"?OK:r.st==="slow"?BAD:"#94A3B8";
-    ctx.save(); ctx.shadowColor="rgba(11,43,102,.10)"; ctx.shadowBlur=24; ctx.shadowOffsetY=8; rr(x,yy,w,blkH,26); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore();
-    ctx.save(); rr(x,yy,w,blkH,26); ctx.clip(); ctx.fillStyle=c; ctx.fillRect(x,yy,10,blkH); ctx.restore();
+    const x=P, w=W-2*P, yy=yAcc, B=bh(r), c=r.st==="pb"?OK:r.st==="slow"?BAD:"#94A3B8";
+    ctx.save(); ctx.shadowColor="rgba(11,43,102,.10)"; ctx.shadowBlur=24; ctx.shadowOffsetY=8; rr(x,yy,w,B,26); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore();
+    ctx.save(); rr(x,yy,w,B,26); ctx.clip(); ctx.fillStyle=c; ctx.fillRect(x,yy,10,B); ctx.restore();
     const pc=x+70, py=yy+62, pod=isMeet&&r.place&&r.place<=3;
     ctx.beginPath(); ctx.arc(pc,py,36,0,7); ctx.fillStyle=pod?NAVY:"#EEF2F8"; ctx.fill();
     ctx.textAlign="center"; ctx.fillStyle=pod?"#fff":NAVY; ctx.font=`800 ${r.place?34:22}px ${FD}`; ctx.fillText(r.place||"–",pc,py+12);
@@ -2579,8 +2582,17 @@ async function meetCard(o){
     ctx.fillStyle=r.st==="first"||r.st==="same"?MUTED:"#fff"; ctx.fillText(bt,x+147,yy+105);
     if(r.qual){ ctx.fillStyle=OK; ctx.font=`800 22px ${FD}`; spaced("QUALIFIED · "+r.qual,x+130+bw+16,yy+105,2); }
     ctx.fillStyle=NAVY; ctx.font=`italic 800 76px ${FD}`; ctx.textAlign="right"; ctx.fillText(fmt(r.t),x+w-34,yy+100); ctx.textAlign="left";
-    rr(x+28,yy+140,w-56,blkH-162,20); ctx.fillStyle="#F5F8FD"; ctx.fill();
-    chart(r,x+28,yy+140,w-56,blkH-162);
+    /* شريط أزمنة التأهيل: من الأسهل للأصعب — أخضر و✓ لو اتأهل، غير كده مكتوب الباقي */
+    let cy=yy+140;
+    if(r.q){ const lv=["RQT","NCT","NQT"].filter(l=>r.q[l]), qw=(w-56-(lv.length-1)*14)/lv.length;
+      lv.forEach((l,j)=>{ const qx=x+28+j*(qw+14), ok=r.t<=r.q[l]+1e-4;
+        rr(qx,cy,qw,88,18); ctx.fillStyle=ok?"rgba(22,163,106,.12)":"#F5F8FD"; ctx.fill(); ctx.strokeStyle=ok?OK:"#D5DEEA"; ctx.lineWidth=2; ctx.stroke();
+        ctx.textAlign="center"; ctx.fillStyle=ok?OK:NAVY; ctx.font=`800 26px ${FD}`; ctx.fillText(l+"  "+fmt(r.q[l])+(ok?"  ✓":""),qx+qw/2,cy+38);
+        ctx.fillStyle=ok?OK:MUTED; ctx.font=`700 19px ${FD}`; spaced(ok?"QUALIFIED":(r.t-r.q[l]).toFixed(2)+" s TO GO",qx+qw/2,cy+70,2,"center"); ctx.textAlign="left"; });
+      cy+=QH; }
+    rr(x+28,cy,w-56,blkH-162,20); ctx.fillStyle="#F5F8FD"; ctx.fill();
+    chart(r,x+28,cy,w-56,blkH-162);
+    yAcc+=B+gap;
   });
   const fy=H-80; ctx.fillStyle="#D5DEEA"; ctx.fillRect(P,fy,W-2*P,2);
   ctx.fillStyle="#7C8BA3"; ctx.font=`700 22px ${FD}`; spaced("SWIM  ·  RACE  ·  IMPROVE",W/2,fy+46,5,"center");
