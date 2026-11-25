@@ -16,7 +16,7 @@
 <meta name="theme-color" content="#0B5770">
 <title>Safwa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,600&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Barlow+Semi+Condensed:ital,wght@0,600;0,700;0,800;1,800&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 :root{
   --tile:#EEF5F6; --card:#FFFFFF; --water:#0B5770; --deep:#073B4C; --ink:#0F2A33; --muted:#5B7680;
@@ -2397,83 +2397,110 @@ function meetCardData(m,id){
     /* آخر 8 أوقات في نفس السباق ونفس الحمام لحد البطولة دي */
     const hist=state.results.filter(o=>o.swimmer===id&&o.stroke===r.stroke&&o.dist==r.dist&&(o.pool||20)==(r.pool||20)&&(o.id===r.id||byDate(o,r)<0))
       .sort(byDate).slice(-8).map(o=>({d:dmy(o.date).slice(0,5),t:o.t}));
-    return {ev:`${r.dist} m ${STROKE_EN[r.stroke]||r.stroke}`,t:fmt(r.t),place:r.rank||null,st,d:d==null?0:Math.abs(d),hist};
+    return {ev:`${r.dist} m ${STROKE_EN[r.stroke]||r.stroke}`,t:r.t,place:r.rank||null,st,d:d==null?0:Math.abs(d),hist};
   });
   const age=ageOf(sw);
   return {name:(sw.nameEn||"").trim(),label:(sw.sex==="f"?"GIRLS":"BOYS")+(age?" · "+(AGE_EN[age]||age):""),
     range:rs[0].date===rs[rs.length-1].date?dmy(rs[0].date):dmy(rs[0].date)+" → "+dmy(rs[rs.length-1].date),
     rows,file:`Meet-Results-${(sw.nameEn||"swimmer").trim().replace(/[^A-Za-z0-9]+/g,"-")}-${rs[0].date}`};
 }
-/* الرسم — نفس شكل كارت الغياب الزجاجي في TEAM */
+/* الرسم — شكل Clean Pro: هيدر أزرق ولوجو كارت الغياب وحبل الحارة.
+   الكارت الكبير اللي فوق (الميدالية) بيظهر بس لو السباح جاب مركز من 1 لـ 3 */
 async function meetCard(o){
-  const FF='"IBM Plex Sans","Helvetica Neue",Arial,sans-serif';
-  const W=1080, PAD=56, rows=o.rows, rowH=110, gap=14, chH=250, blkH=rowH+chH;
-  const BLUE="#1F5FBF", INK="#0F1C2C", MUTED="#5D6B7D", OK="#1B7A4C", BAD="#B23A2E";
-  try{await Promise.all([document.fonts.load('400 28px "IBM Plex Sans"'),document.fonts.load('600 30px "IBM Plex Sans"'),document.fonts.load('italic 600 30px "IBM Plex Sans"')]);}catch(e){}
+  const FD='"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif';
+  try{ await Promise.all(["800 40px","700 40px","600 40px","italic 800 40px"].map(f=>document.fonts.load(f+' "Barlow Semi Condensed"'))); }catch(e){}
   const lg=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=CARD_LOGO;});
-  const H=PAD+104+28+132+28+rows.length*(blkH+gap)-gap+PAD, SC=2;
+  const rows=o.rows, hr=rows.filter(r=>r.place&&r.place<=3).sort((a,b)=>a.place-b.place)[0]||null;
+  const W=1080, P=60, blkH=372, gap=22, heroH=290, band=400;
+  const H=(hr?band+heroH-90+46:band+46)+rows.length*(blkH+gap)-gap+150, SC=2;
   const cv=document.createElement("canvas"); cv.width=W*SC; cv.height=H*SC;
-  const ctx=cv.getContext("2d"); ctx.scale(SC,SC); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; ctx.textBaseline="alphabetic"; ctx.direction="ltr";
-  const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();};
-  const glass=(x,y,w,h,r,a)=>{ ctx.save(); ctx.shadowColor="rgba(40,80,140,.12)"; ctx.shadowBlur=22; ctx.shadowOffsetY=6; rr(x,y,w,h,r); ctx.fillStyle=`rgba(255,255,255,${a||.55})`; ctx.fill(); ctx.restore(); rr(x,y,w,h,r); ctx.strokeStyle="rgba(255,255,255,.95)"; ctx.lineWidth=2; ctx.stroke(); };
-  const fit=(t,max,size,weight)=>{ let s=size; ctx.font=`${weight} ${s}px ${FF}`; while(s>12&&ctx.measureText(t).width>max){s--;ctx.font=`${weight} ${s}px ${FF}`;} };
-  /* the chart: his last 8 times in this race (same distance, stroke, pool). Faster is higher; the last point is this meet */
-  const raceChart=(r,x,y,w,h)=>{
-    const pts=r.hist, n=pts.length, L=x+110, R=x+w-30, T=y+40, B=y+h-46;
-    ctx.save(); rr(x,y,w,h,18); ctx.fillStyle="rgba(255,255,255,.45)"; ctx.fill(); ctx.restore();
-    ctx.fillStyle="#7D93B3"; ctx.font="600 18px "+FF; ctx.fillText("FASTER ↑",x+18,y+28);
-    ctx.textAlign="right"; ctx.fillText(n>1?`LAST ${n} TIMES`:"FIRST TIME IN THIS RACE",x+w-18,y+28); ctx.textAlign="left";
+  const ctx=cv.getContext("2d"); ctx.scale(SC,SC); ctx.direction="ltr"; ctx.textBaseline="alphabetic"; ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+  const NAVY="#0B2B66", BLUE="#1F5FD0", OK="#16A36A", BAD="#E0414F", MUTED="#64748B", INK="#0B1B33";
+  const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
+  const fit=(t,max,size,weight)=>{ let s=size; ctx.font=`${weight} ${s}px ${FD}`; while(s>14&&ctx.measureText(t).width>max){s--;ctx.font=`${weight} ${s}px ${FD}`;} return s; };
+  const spaced=(t,x,y,sp,align)=>{ const w=[...t].reduce((a,c)=>a+ctx.measureText(c).width+sp,0)-sp; let cx=align==="right"?x-w:align==="center"?x-w/2:x;
+    const a0=ctx.textAlign; ctx.textAlign="left"; [...t].forEach(c=>{ ctx.fillText(c,cx,y); cx+=ctx.measureText(c).width+sp; }); ctx.textAlign=a0; };
+  const badgeTxt=r=>r.st==="pb"?"PB  −"+r.d.toFixed(2):r.st==="slow"?"+"+r.d.toFixed(2):r.st==="first"?"FIRST SWIM":"= PB";
+  const medal=(cx,cy,r,place)=>{
+    const C={1:["#FFE27A","#E0A91F","#9A6B07"],2:["#F4F7FB","#B7C1CE","#6F7B8B"],3:["#F3BE8C","#C27A3F","#7A4317"]}[place];
+    ctx.save();
+    ctx.fillStyle="#D23B3B"; ctx.beginPath(); ctx.moveTo(cx-r*.75,cy-r*2.1); ctx.lineTo(cx-r*.15,cy-r*2.1); ctx.lineTo(cx+r*.25,cy-r*.6); ctx.lineTo(cx-r*.35,cy-r*.6); ctx.fill();
+    ctx.fillStyle="#1F5FBF"; ctx.beginPath(); ctx.moveTo(cx+r*.75,cy-r*2.1); ctx.lineTo(cx+r*.15,cy-r*2.1); ctx.lineTo(cx-r*.25,cy-r*.6); ctx.lineTo(cx+r*.35,cy-r*.6); ctx.fill();
+    ctx.shadowColor="rgba(0,0,0,.35)"; ctx.shadowBlur=18; ctx.shadowOffsetY=6;
+    const g=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r); g.addColorStop(0,C[0]); g.addColorStop(.55,C[1]); g.addColorStop(1,C[2]);
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.fillStyle=g; ctx.fill(); ctx.restore();
+    ctx.beginPath(); ctx.arc(cx,cy,r*.78,0,7); ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=3; ctx.stroke();
+    ctx.fillStyle=C[2]; ctx.font=`800 ${r*1.05}px ${FD}`; ctx.textAlign="center"; ctx.fillText(place,cx,cy+r*.37); ctx.textAlign="left";
+  };
+  const rope=(x,y,w)=>{ for(let i=0,px=x;px<x+w;i++,px+=26){ ctx.beginPath(); ctx.ellipse(px+11,y,11,7,0,0,7); ctx.fillStyle=i%4<2?"#D23B3B":"#FFFFFF"; ctx.fill(); } };
+  /* رسم آخر 8 أوقات في السباق ده: كل ما يطلع لفوق أسرع، وآخر نقطة هي البطولة دي */
+  const chart=(r,x,y,w,h)=>{
+    const pts=r.hist, n=pts.length, L=x+108, R=x+w-34, T=y+46, B=y+h-46;
+    ctx.fillStyle="#7C8BA3"; ctx.font=`700 19px ${FD}`; spaced("FASTER ↑",x+20,y+30,2);
+    spaced(n>1?`LAST ${n} TIMES`:"FIRST TIME IN THIS RACE",x+w-20,y+30,2,"right");
     if(!n) return;
     const ts=pts.map(p=>p.t), lo=Math.min(...ts), hi=Math.max(...ts), rg=(hi-lo)||1;
     const X=i=>n>1?L+i*(R-L)/(n-1):(L+R)/2, Y=t=>n>1&&hi>lo?T+(t-lo)/rg*(B-T):(T+B)/2;
-    ctx.strokeStyle="rgba(93,107,125,.22)"; ctx.lineWidth=2; ctx.setLineDash([6,8]);
+    ctx.strokeStyle="rgba(100,116,139,.22)"; ctx.lineWidth=2; ctx.setLineDash([5,9]);
     [lo,hi].forEach(t=>{ ctx.beginPath(); ctx.moveTo(L,Y(t)); ctx.lineTo(R,Y(t)); ctx.stroke(); }); ctx.setLineDash([]);
-    ctx.fillStyle=MUTED; ctx.font="400 19px "+FF; ctx.textAlign="right";
-    ctx.fillText(fmt(lo),L-14,Y(lo)+7); if(hi>lo) ctx.fillText(fmt(hi),L-14,Y(hi)+7); ctx.textAlign="left";
-    if(n>1){ ctx.beginPath(); pts.forEach((p,i)=>{ i?ctx.lineTo(X(i),Y(p.t)):ctx.moveTo(X(i),Y(p.t)); });
-      ctx.strokeStyle=BLUE; ctx.lineWidth=4; ctx.lineJoin="round"; ctx.stroke(); }
-    pts.forEach((p,i)=>{ const last=i===n-1, c=last?(r.st==="pb"?"#2EAA6E":r.st==="slow"?"#DC463C":BLUE):BLUE;
-      ctx.beginPath(); ctx.arc(X(i),Y(p.t),last?13:7,0,7); ctx.fillStyle=last?c:"#fff"; ctx.fill();
-      ctx.lineWidth=last?4:3; ctx.strokeStyle=last?"#fff":BLUE; ctx.stroke(); });
-    ctx.fillStyle=MUTED; ctx.font="400 18px "+FF; ctx.textAlign="center";
-    ctx.fillText(pts[0].d,X(0),B+38); if(n>1) ctx.fillText(pts[n-1].d,X(n-1),B+38); ctx.textAlign="left";
+    ctx.fillStyle=MUTED; ctx.font=`600 21px ${FD}`; ctx.textAlign="right";
+    ctx.fillText(fmt(lo),L-16,Y(lo)+7); if(hi>lo) ctx.fillText(fmt(hi),L-16,Y(hi)+7); ctx.textAlign="left";
+    if(n>1){
+      const ag=ctx.createLinearGradient(0,T,0,B); ag.addColorStop(0,"rgba(31,95,208,.22)"); ag.addColorStop(1,"rgba(31,95,208,0)");
+      ctx.beginPath(); pts.forEach((p,i)=>{ i?ctx.lineTo(X(i),Y(p.t)):ctx.moveTo(X(i),Y(p.t)); }); ctx.lineTo(X(n-1),B); ctx.lineTo(X(0),B); ctx.closePath(); ctx.fillStyle=ag; ctx.fill();
+      ctx.beginPath(); pts.forEach((p,i)=>{ i?ctx.lineTo(X(i),Y(p.t)):ctx.moveTo(X(i),Y(p.t)); });
+      ctx.strokeStyle=BLUE; ctx.lineWidth=5; ctx.lineJoin="round"; ctx.lineCap="round"; ctx.stroke();
+    }
+    pts.forEach((p,i)=>{ const last=i===n-1, c=last?(r.st==="pb"?OK:r.st==="slow"?BAD:BLUE):BLUE;
+      ctx.save(); if(last){ ctx.shadowColor=c; ctx.shadowBlur=22; }
+      ctx.beginPath(); ctx.arc(X(i),Y(p.t),last?14:7,0,7); ctx.fillStyle=last?c:"#fff"; ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.arc(X(i),Y(p.t),last?14:7,0,7); ctx.lineWidth=last?4:3; ctx.strokeStyle=last?"#fff":BLUE; ctx.stroke(); });
+    ctx.fillStyle=MUTED; ctx.font=`600 19px ${FD}`; ctx.textAlign="center";
+    ctx.fillText(pts[0].d,X(0),B+36); if(n>1) ctx.fillText(pts[n-1].d,X(n-1),B+36); ctx.textAlign="left";
   };
-  /* background */
-  const g=ctx.createLinearGradient(0,0,W*.45,H); g.addColorStop(0,"#CFE3FF"); g.addColorStop(.45,"#EAF3FF"); g.addColorStop(1,"#D4F3EA"); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-  const blob=(x,y,r,c)=>{ const b=ctx.createRadialGradient(x,y,0,x,y,r); b.addColorStop(0,c); b.addColorStop(1,"rgba(255,255,255,0)"); ctx.fillStyle=b; ctx.fillRect(x-r,y-r,2*r,2*r); };
-  blob(40,H*.32,420,"rgba(127,178,255,.55)"); blob(W-20,H*.86,400,"rgba(127,224,200,.5)");
-  if(lg){ const ww=W*.82, hh=ww*lg.height/lg.width; ctx.globalAlpha=.06; ctx.drawImage(lg,(W-ww)/2,(H-hh)/2,ww,hh); ctx.globalAlpha=1; }
-  let y=PAD;
-  /* title chip + logo */
-  ctx.font="italic 600 54px "+FF; const t1="MEET RESULTS", tw=ctx.measureText(t1).width;
-  rr(PAD,y,tw+64,104,28); ctx.fillStyle="rgba(31,95,191,.93)"; ctx.fill(); ctx.fillStyle="#fff"; ctx.fillText(t1,PAD+32,y+72);
-  if(lg){ const lw=250, lh=lw*lg.height/lg.width; ctx.drawImage(lg,W-PAD-lw,y+52-lh/2,lw,lh); }
-  y+=104+28;
-  /* who */
-  glass(PAD,y,W-2*PAD,132,30);
-  ctx.fillStyle=INK; fit(o.name,W-2*PAD-420,46,600); ctx.fillText(o.name,PAD+36,y+62);
-  ctx.fillStyle=MUTED; ctx.font="400 27px "+FF; ctx.fillText(o.range,PAD+36,y+104);
-  ctx.fillStyle=BLUE; fit(o.label,380,30,"italic 600"); ctx.textAlign="right"; ctx.fillText(o.label,W-PAD-36,y+104); ctx.textAlign="left";
-  y+=132+28;
-  /* one glass block per race: the result on top, his history in that race under it */
-  const cw=W-2*PAD;
+  /* الخلفية واللوجو الباهت */
+  ctx.fillStyle="#F3F6FB"; ctx.fillRect(0,0,W,H);
+  if(lg){ const ww=W*.9, hh=ww*lg.height/lg.width; ctx.globalAlpha=.045; ctx.drawImage(lg,(W-ww)/2,H*.6-hh/2,ww,hh); ctx.globalAlpha=1; }
+  /* الهيدر الأزرق بالخطوط المايلة */
+  const bg=ctx.createLinearGradient(0,0,W,band); bg.addColorStop(0,"#0A2A6B"); bg.addColorStop(.6,"#1446A8"); bg.addColorStop(1,"#1F6FE0"); ctx.fillStyle=bg; ctx.fillRect(0,0,W,band);
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,band); ctx.clip(); ctx.strokeStyle="rgba(255,255,255,.07)"; ctx.lineWidth=34;
+  for(let x=-band;x<W+band;x+=90){ ctx.beginPath(); ctx.moveTo(x,band); ctx.lineTo(x+band,0); ctx.stroke(); } ctx.restore();
+  if(lg){ const lw=200, lh=lw*lg.height/lg.width, bx=W-P-lw-30, by=P-14; ctx.save(); ctx.shadowColor="rgba(0,0,0,.25)"; ctx.shadowBlur=24; rr(bx,by,lw+60,lh+28,22); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore(); ctx.drawImage(lg,bx+30,by+14,lw,lh); }
+  ctx.fillStyle="#9CC2FF"; ctx.font=`700 26px ${FD}`; spaced("MEET RESULTS",P,P+28,6);
+  const name=o.name.toUpperCase();
+  ctx.fillStyle="#fff"; const ns=fit(name,W-2*P-300,104,"800"); ctx.fillText(name,P,P+56+ns*.9);
+  ctx.fillStyle="#CFE0FF"; ctx.font=`600 30px ${FD}`; spaced(o.label+"   |   "+o.range,P,P+56+ns*.9+50,1.5);
+  rope(0,band-6,W+30);
+  /* الميدالية — بس لو مركز من 1 لـ 3 */
+  let y=band+46;
+  if(hr){ y=band-90+30;
+    ctx.save(); ctx.shadowColor="rgba(11,43,102,.22)"; ctx.shadowBlur=40; ctx.shadowOffsetY=14; rr(P,y,W-2*P,heroH,30); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore();
+    medal(P+130,y+heroH/2+40,78,hr.place);
+    const tx=P+260;
+    ctx.fillStyle=BLUE; ctx.font=`700 24px ${FD}`; spaced(`BEST SWIM · PLACE ${hr.place}`,tx,y+66,4);
+    ctx.fillStyle=MUTED; ctx.font=`700 40px ${FD}`; ctx.fillText(hr.ev.toUpperCase(),tx,y+116);
+    ctx.fillStyle=NAVY; ctx.font=`italic 800 116px ${FD}`; ctx.fillText(fmt(hr.t),tx-4,y+232);
+    if(hr.st==="pb"){ ctx.font=`800 28px ${FD}`; const bt=badgeTxt(hr), bw=ctx.measureText(bt).width+40; rr(W-P-bw-30,y+196,bw,50,25); ctx.fillStyle=OK; ctx.fill(); ctx.fillStyle="#fff"; ctx.fillText(bt,W-P-bw-10,y+231); }
+    y+=heroH+46; }
+  /* السباقات */
   rows.forEach((r,i)=>{
-    const x=PAD, yy=y+i*(blkH+gap);
-    glass(x,yy,cw,blkH,24,.6);
-    const strip=r.st==="pb"?"#2EAA6E":r.st==="slow"?"#DC463C":null;
-    if(strip){ ctx.save(); rr(x,yy,cw,blkH,24); ctx.clip(); ctx.fillStyle=strip; ctx.fillRect(x,yy,10,blkH); ctx.restore(); }
-    raceChart(r,x+26,yy+rowH,cw-52,chH-24);
-    ctx.fillStyle="#7D93B3"; ctx.font="600 22px "+FF; ctx.fillText(String(i+1).padStart(2,"0"),x+26,yy+64);
-    ctx.fillStyle=BLUE; ctx.font="600 34px "+FF; ctx.fillText(r.ev,x+70,yy+50);
-    ctx.fillStyle=MUTED; ctx.font="400 22px "+FF; ctx.fillText(r.place?"Place "+r.place:"No place recorded",x+70,yy+86);
-    const txt=r.st==="pb"?"PB −"+r.d.toFixed(2):r.st==="slow"?"+"+r.d.toFixed(2):r.st==="first"?"FIRST SWIM":"= PB";
-    ctx.font="600 22px "+FF; const pw=Math.max(150,ctx.measureText(txt).width+30), px=x+cw-pw-20, py=yy+(rowH-48)/2;
-    rr(px,py,pw,48,14);
-    ctx.fillStyle=r.st==="pb"?"rgba(46,170,110,.22)":r.st==="slow"?"rgba(220,70,60,.18)":"rgba(255,255,255,.65)"; ctx.fill();
-    ctx.strokeStyle=r.st==="pb"?"rgba(46,170,110,.55)":r.st==="slow"?"rgba(220,70,60,.5)":"rgba(160,175,195,.45)"; ctx.lineWidth=2; ctx.stroke();
-    ctx.fillStyle=r.st==="pb"?OK:r.st==="slow"?BAD:"#7B8796"; ctx.textAlign="center"; ctx.fillText(txt,px+pw/2,py+32);
-    ctx.fillStyle=INK; ctx.font="italic 600 44px "+FF; ctx.textAlign="right"; ctx.fillText(r.t,px-28,yy+70); ctx.textAlign="left";
+    const x=P, w=W-2*P, yy=y+i*(blkH+gap), c=r.st==="pb"?OK:r.st==="slow"?BAD:"#94A3B8";
+    ctx.save(); ctx.shadowColor="rgba(11,43,102,.10)"; ctx.shadowBlur=24; ctx.shadowOffsetY=8; rr(x,yy,w,blkH,26); ctx.fillStyle="#fff"; ctx.fill(); ctx.restore();
+    ctx.save(); rr(x,yy,w,blkH,26); ctx.clip(); ctx.fillStyle=c; ctx.fillRect(x,yy,10,blkH); ctx.restore();
+    const pc=x+70, py=yy+62, pod=r.place&&r.place<=3;
+    ctx.beginPath(); ctx.arc(pc,py,36,0,7); ctx.fillStyle=pod?NAVY:"#EEF2F8"; ctx.fill();
+    ctx.textAlign="center"; ctx.fillStyle=pod?"#fff":NAVY; ctx.font=`800 ${r.place?34:22}px ${FD}`; ctx.fillText(r.place||"–",pc,py+12);
+    ctx.fillStyle=MUTED; ctx.font=`700 15px ${FD}`; ctx.fillText("PLACE",pc,py+58); ctx.textAlign="left";
+    ctx.fillStyle=INK; ctx.font=`700 40px ${FD}`; ctx.fillText(r.ev.toUpperCase(),x+130,yy+60);
+    ctx.font=`800 22px ${FD}`; const bt=badgeTxt(r), bw=ctx.measureText(bt).width+34;
+    rr(x+130,yy+78,bw,38,19); ctx.fillStyle=r.st==="pb"?OK:r.st==="slow"?BAD:"#E2E8F0"; ctx.fill();
+    ctx.fillStyle=r.st==="first"||r.st==="same"?MUTED:"#fff"; ctx.fillText(bt,x+147,yy+105);
+    ctx.fillStyle=NAVY; ctx.font=`italic 800 76px ${FD}`; ctx.textAlign="right"; ctx.fillText(fmt(r.t),x+w-34,yy+100); ctx.textAlign="left";
+    rr(x+28,yy+140,w-56,blkH-162,20); ctx.fillStyle="#F5F8FD"; ctx.fill();
+    chart(r,x+28,yy+140,w-56,blkH-162);
   });
+  const fy=H-80; ctx.fillStyle="#D5DEEA"; ctx.fillRect(P,fy,W-2*P,2);
+  ctx.fillStyle="#7C8BA3"; ctx.font=`700 22px ${FD}`; spaced("SWIM  ·  RACE  ·  IMPROVE",W/2,fy+46,5,"center");
   return await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("png")),"image/png"));
 }
 /* PDF صفحة واحدة فيها الكارت (JPEG) — عرضها قد A4 وطولها على قد الكارت. نفس طريقة TEAM */
