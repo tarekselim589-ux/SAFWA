@@ -1320,10 +1320,13 @@ function swimmerView(){
     <label>سباقاته في البطولة الجاية</label>
     <div class="chips" id="edEnt">${entChips(sw,champPoolOf(sw),sw.entries||[])}</div>
     <p class="hint">اختار اللي هيدخله براحتك. العلامة ✦ معناها إن عندك أرقام الأول والتالت للسباق ده في فئته. لو سبتها فاضية، التطبيق هيحددها لوحده.</p>
+    <button class="btn ghost small" id="qOpen" style="margin-bottom:8px">⏱ أزمنة التأهيل (NQT · NCT · RQT)</button>
+    ${qualForm(sw)}
     <div class="row"><button class="btn" id="edSave">احفظ التعديل</button><button class="btn ghost" id="edCancel">إلغاء</button>
       <button class="x" id="edDel" style="margin-inline-start:auto;color:var(--bad)">امسح السباح</button></div>
   </div>`:""}
   <div class="row" style="gap:8px;margin-top:12px"><button class="btn ghost small" data-mcm="0">📤 كارت الشهر ده</button><button class="btn ghost small" data-mcm="1">كارت الشهر اللي فات</button><button class="btn ghost small" data-season="1">🏆 تقرير الموسم</button></div>
+  ${qualCard(sw)}
   ${hasRace&&hasTest?`<div class="chips" style="margin-top:12px"><button class="chip" data-swk="test" aria-pressed="${kind==="test"}">القياسات</button><button class="chip" data-swk="race" aria-pressed="${kind==="race"}">البطولات</button></div>`:""}
   ${!evs.length?`<div class="panel empty" style="margin-top:12px">مفيش أوقات لسه. سجّل أول وقت.</div>${devCard(sw)}`:`
   <div class="chips">${evs.map(x=>`<button class="chip" data-ev="${x.key}" aria-pressed="${x.key===state.event}">${evName(x.key)}</button>`).join("")}</div>
@@ -1365,6 +1368,33 @@ function swimmerView(){
     <span>${r.date} · ${r.dist}م ${STROKES[r.stroke]}${r.kind==="race"?" · بطولة"+(r.rank?` (مركز ${r.rank})`:""):""}${(r.pool||20)!=20?` · حمام ${r.pool}`:""}${r.sc?` · ${r.sc} ضربة`:""}${r.note?` · ${esc(r.note)}`:""}${(r.laps||[]).length?`<br><span style="direction:ltr;display:inline-block;font-variant-numeric:tabular-nums">${r.laps.map(x=>x.toFixed(2)).join(" / ")}</span>`:""}</span>
     <span class="row" style="gap:6px"><span style="font-size:13px">${diffHtml(r.t,prevOf(r,rs)?.t)}</span><span class="t">${fmt(r.t)}</span><button class="x" data-redit="${r.id}" aria-label="تعديل">✎</button><button class="x" data-del="${r.id}" aria-label="امسح">✕</button></span></li>`).join("")}</ul>
   ${rs.length>6?`<button class="more" id="hMore">${state.histAll?"اخفي":"اعرض كل السجل ("+rs.length+")"}</button>`:""}</div>`}`;
+}
+/* ===== أزمنة التأهيل (NQT / NCT / RQT) — متخزنة جوه بيانات السباح نفسه (sw.quals) ===== */
+const QLV=["NQT","NCT","RQT"];   // من الأصعب للأسهل
+/* أزمنة Girls 11-12 حمام 25 — بتظهر جاهزة في الفورمة لحد ما تتحفظ */
+const QT_DEF={"50|fly|25":{NQT:38.08,NCT:38.94,RQT:40.26},"50|free|25":{NQT:35.04,NCT:35.79,RQT:37.09},
+  "50|breast|25":{NQT:44.85,NCT:45.68,RQT:47.39},"100|free|25":{NQT:74.64,NCT:76.59,RQT:79.54}};
+/* أعلى مستوى وصله الوقت ده في السباق ده (أو null) */
+function qualHit(sw,key,t){ const q=sw&&sw.quals&&sw.quals[key]; if(!q||t==null) return null; return QLV.find(l=>q[l]&&t<=q[l]+0.0001)||null; }
+function qualForm(sw){
+  const q=sw.quals||QT_DEF, keys=Object.keys(q);
+  return `<div id="qBox" hidden style="margin:6px 0 12px">
+    <p class="hint" style="margin:0 0 6px">أزمنة التأهيل (حمام 25). سيب الخانة فاضية لو مفيش زمن.</p>
+    ${keys.map((k,i)=>`<div class="row" style="align-items:flex-end;gap:8px;margin-bottom:8px" data-qkey="${esc(k)}">
+      <b style="min-width:84px">${esc(evName(k))}</b>
+      ${QLV.map(l=>`<div class="field" style="margin:0;max-width:96px"><label for="q-${i}-${l}">${l}</label><input id="q-${i}-${l}" class="num" inputmode="decimal" value="${q[k]&&q[k][l]?fmt(q[k][l]):""}"></div>`).join("")}
+    </div>`).join("")}
+  </div>`;
+}
+function qualCard(sw){
+  const q=sw.quals; if(!q) return "";
+  const rows=Object.keys(q).map(k=>{ const [d,st,p]=k.split("|");
+    const ts=state.results.filter(r=>r.swimmer===sw.id&&r.kind==="race"&&r.stroke===st&&r.dist==d&&(r.pool||20)==p).map(r=>r.t), best=ts.length?Math.min(...ts):null;
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${esc(evName(k))}</b> <span class="lmeta">— ${best!=null?`أحسن رقم <span style="direction:ltr;display:inline-block">${fmt(best)}</span>`:"لسه مفيش رقم بطولة"}</span>
+      ${[...QLV].reverse().filter(l=>q[k][l]).map(l=>{ const ok=best!=null&&best<=q[k][l]+0.0001;
+        return `<div class="row" style="justify-content:space-between;margin-top:4px"><span>${l} <span style="direction:ltr;display:inline-block">${fmt(q[k][l])}</span></span>
+          <span class="${ok?"up":"down"}" style="font-weight:600">${ok?"✓ اتأهلت":best!=null?`باقي <span style="direction:ltr;display:inline-block">${(best-q[k][l]).toFixed(2)}</span> ث`:"—"}</span></div>`; }).join("")}</div>`; }).join("");
+  return `<h2>أزمنة التأهيل</h2><div class="panel" style="padding-top:6px">${rows}</div>`;
 }
 /* فورمة تعديل وقت متسجل في سجل السباح (الوقت والتاريخ، والمركز والنص الأول لو بطولة) */
 function resEditLi(r){
@@ -1478,6 +1508,9 @@ function goalsView(){
       <div class="field" style="max-width:130px"><label for="gT">الوقت المستهدف</label><input id="gT" class="num" inputmode="decimal" value="${esc(state.gT||"")}" placeholder="31.00"></div>
     </div>
     <div class="row"><button class="btn" id="gSave">احفظ الهدف</button><button class="btn ghost" id="gSuggest">اقترح هدف</button></div>
+    ${(()=>{ const qs=state.swimmers.find(s=>s.id===state.gf.sw)?.quals; if(!qs) return "";
+      const n=Object.values(qs).reduce((a,o)=>a+Object.keys(o).length,0);
+      return `<button class="btn ghost small" data-qgoals="${esc(state.gf.sw)}" style="margin-top:10px">⏱ حط أزمنة التأهيل كأهداف (${n})</button>`; })()}
     ${state.gWhy?`<p class="note">${esc(state.gWhy)}</p>`:""}
     ${(state.gOpts||[]).map(o=>`<div class="rowbtn" style="border-bottom:1px solid var(--line)">
       <span><b>${esc(o.label)}</b> <span class="t">${fmt(o.target)}</span><br><span class="lmeta">${esc(o.note)}${o.train?` · في التمرين: ${o.train}`:""}</span></span>
@@ -2374,7 +2407,8 @@ function resultsView(){
       <button class="chip" data-by="swimmer" aria-pressed="${by==="swimmer"}">بالسباح</button></div>`;
   if(by==="sum") return head+`<div class="row" style="margin:0 0 10px"><button class="btn ghost small" data-mcardall="1">📤 كروت كل السباحين (PDF)</button></div>`+meetSummary(m);
   const line=r=>{ const pb=prevBest(r), d=pb==null?`<span class="flat">أول مرة</span>`:diffHtml(r.t,pb);
-    return `<span style="text-align:left"><span class="t">${fmt(r.t)}</span><br><span style="font-size:12.5px">${d}</span></span>`; };
+    const q=qualHit(state.swimmers.find(s=>s.id===r.swimmer),evKey(r),r.t);
+    return `<span style="text-align:left"><span class="t">${fmt(r.t)}</span>${q?`<span class="badge" style="background:var(--good);color:#fff">${q} ✓</span>`:""}<br><span style="font-size:12.5px">${d}</span></span>`; };
   if(by==="event"){
     const g={}; m.rs.forEach(r=>{ (g[evKey(r)]=g[evKey(r)]||[]).push(r); });
     const body=Object.entries(g).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,rs])=>{
@@ -2433,7 +2467,7 @@ function meetCardData(m,id){
     /* آخر 8 أوقات في نفس السباق ونفس الحمام لحد البطولة دي */
     const hist=state.results.filter(o=>o.swimmer===id&&o.kind==="race"&&o.stroke===r.stroke&&o.dist==r.dist&&(o.pool||20)==(r.pool||20)&&(o.id===r.id||byDate(o,r)<0))
       .sort(byDate).slice(-8).map(o=>({d:dmy(o.date).slice(0,5),t:o.t}));
-    return {ev:`${r.dist} m ${STROKE_EN[r.stroke]||r.stroke}`,t:r.t,place:r.rank||null,st,d:d==null?0:Math.abs(d),hist};
+    return {ev:`${r.dist} m ${STROKE_EN[r.stroke]||r.stroke}`,t:r.t,place:r.rank||null,st,d:d==null?0:Math.abs(d),hist,qual:qualHit(sw,evKey(r),r.t)};
   });
   const age=ageOf(sw);
   return {name:(sw.nameEn||"").trim(),label:(sw.sex==="f"?"GIRLS":"BOYS")+(age?" · "+(AGE_EN[age]||age):""),
@@ -2543,6 +2577,7 @@ async function meetCard(o){
     ctx.font=`800 22px ${FD}`; const bt=badgeTxt(r), bw=ctx.measureText(bt).width+34;
     rr(x+130,yy+78,bw,38,19); ctx.fillStyle=r.st==="pb"?OK:r.st==="slow"?BAD:"#E2E8F0"; ctx.fill();
     ctx.fillStyle=r.st==="first"||r.st==="same"?MUTED:"#fff"; ctx.fillText(bt,x+147,yy+105);
+    if(r.qual){ ctx.fillStyle=OK; ctx.font=`800 22px ${FD}`; spaced("QUALIFIED · "+r.qual,x+130+bw+16,yy+105,2); }
     ctx.fillStyle=NAVY; ctx.font=`italic 800 76px ${FD}`; ctx.textAlign="right"; ctx.fillText(fmt(r.t),x+w-34,yy+100); ctx.textAlign="left";
     rr(x+28,yy+140,w-56,blkH-162,20); ctx.fillStyle="#F5F8FD"; ctx.fill();
     chart(r,x+28,yy+140,w-56,blkH-162);
@@ -3512,6 +3547,15 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.mcm!==undefined&&state.sel){ const old=t.textContent; t.disabled=true; t.textContent="بيجهز…";
     try{ await once("mcm",()=>openMonthCard(state.sel,ymOf(+t.dataset.mcm))); }catch(e){ toast("معرفتش أجهز الكارت، جرّب تاني"); }
     t.disabled=false; t.textContent=old; return; }
+  /* أزمنة التأهيل */
+  if(t.id==="qOpen"){ const b=$("#qBox"); if(b) b.hidden=!b.hidden; return; }
+  if(t.dataset.qgoals){ const sw=state.swimmers.find(s=>s.id===t.dataset.qgoals), qs=sw?.quals; if(!qs) return;
+    const list=[]; Object.entries(qs).forEach(([k,o])=>{ const [d,st,p]=k.split("|"); QLV.forEach(l=>{ if(o[l]) list.push({swimmer:sw.id,stroke:st,dist:+d,pool:+p,target:o[l],tier:l.toLowerCase(),label:l}); }); });
+    if(!(await askConfirm(`هيضيف ${list.length} هدف لـ${sw.name} (NQT · NCT · RQT لكل سباق). لو الهدف موجود هيتحدّث بس.`,"أيوه، ضيفهم"))) return;
+    await once("qgoals",async()=>{ t.disabled=true; let n=0;
+      try{ for(const g of list){ await store.setGoal(g); n++; } toast(`اتضاف ${n} هدف`); render(); }
+      catch(e){ toast(n?`اتضاف ${n} بس، دوس تاني للباقي`:"ماتضافش، جرّب تاني"); t.disabled=false; } });
+    return; }
   if(t.dataset.season&&state.sel){ const old=t.textContent; t.disabled=true; t.textContent="بيجهز…";
     try{ await once("season",()=>openSeasonCard(state.sel)); }catch(e){ toast("معرفتش أجهز التقرير، جرّب تاني"); }
     t.disabled=false; t.textContent=old; return; }
@@ -3561,7 +3605,17 @@ document.addEventListener("click",async ev=>{
     const entries=[...document.querySelectorAll("#edEnt [aria-pressed=true]")].map(b=>b.dataset.k);
     const nameEn=($("#edNameEn")?.value||"").trim();
     if(nameEn&&/[؀-ۿ]/.test(nameEn)){toast("الاسم الإنجليزي لازم يتكتب بحروف إنجليزي");return;}
-    try{await store.updSwimmer(state.sel,{name,nameEn,year,strokes,ageGrp,entries,sex:$("#edSex")?.value||"m",champPool:+($("#edPool")?.value||50)});state.edit=null;toast("اتعدّل");render();}catch(e){toast("ماتعدّلش، جرّب تاني");}
+    const patch={name,nameEn,year,strokes,ageGrp,entries,sex:$("#edSex")?.value||"m",champPool:+($("#edPool")?.value||50)};
+    /* أزمنة التأهيل بتتحفظ بس لو فتحت الجزء بتاعها */
+    const qb=$("#qBox");
+    if(qb&&!qb.hidden){ const quals={};
+      for(const row of qb.querySelectorAll("[data-qkey]")){ const k=row.dataset.qkey, dist=+k.split("|")[0], o={};
+        for(const inp of row.querySelectorAll("input")){ const lv=inp.id.split("-").pop(), raw=inp.value.trim(); if(!raw) continue;
+          const tq=parseTime(raw); if(!tq){ toast(`${evName(k)} ${lv}: الوقت مش مفهوم`); return; }
+          const tb=timeBad(tq,dist); if(tb){ toast(`${evName(k)} ${lv}: ${tb}`); return; } o[lv]=+tq.toFixed(2); }
+        if(Object.keys(o).length) quals[k]=o; }
+      patch.quals=Object.keys(quals).length?quals:null; }
+    try{await store.updSwimmer(state.sel,patch);state.edit=null;toast("اتعدّل");render();}catch(e){toast("ماتعدّلش، جرّب تاني");}
     return;
   }
   if(t.id==="edDel"){
